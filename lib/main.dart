@@ -92,9 +92,7 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
       duration: const Duration(seconds: 4),
     )..repeat(reverse: true);
 
-    for (int i = 0; i < 2; i++) {
-      _planes.add(_spawnPlane(initial: true));
-    }
+    // Start with an empty sky; planes drift in from the edges over time.
     _ticker.addListener(_tick);
   }
 
@@ -201,9 +199,7 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
       _throttle = 0.4;
       _heading = 0;
       _planes.clear();
-      for (int i = 0; i < 2; i++) {
-        _planes.add(_spawnPlane(initial: true));
-      }
+      // Reset to empty sky — planes will arrive again on their own.
     });
   }
 
