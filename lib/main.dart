@@ -222,6 +222,7 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
                 Expanded(
                   child: Container(
                     margin: const EdgeInsets.fromLTRB(10, 10, 10, 6),
+                    clipBehavior: Clip.hardEdge,
                     decoration: BoxDecoration(
                       border: Border.all(color: TTR.ink, width: 3),
                       boxShadow: [
