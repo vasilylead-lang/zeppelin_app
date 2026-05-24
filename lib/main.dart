@@ -82,8 +82,8 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
   // Constants used both for rendering and collision math.
   static const double _zeppelinW = 180;
   static const double _zeppelinH = 100;
-  static const double _planeW = 64;
-  static const double _planeH = 40;
+  static const double _planeW = 72;
+  static const double _planeH = 44;
 
   late final AnimationController _ticker;
   late final AnimationController _zeppelinBob;
@@ -935,75 +935,165 @@ class _Biplane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 64,
-      height: 40,
+      width: 72,
+      height: 44,
       child: CustomPaint(painter: _BiplanePainter()),
     );
   }
 }
 
 class _BiplanePainter extends CustomPainter {
+  // Right-facing biplane. (External Transform.flipX handles left-bound planes.)
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
     final outline = Paint()
       ..color = TTR.ink
-      ..strokeWidth = 0.8
+      ..strokeWidth = 0.9
       ..style = PaintingStyle.stroke;
-
-    // Fuselage (TTR red)
-    final fuselage = Path()
-      ..moveTo(w * 0.95, h * 0.5)
-      ..lineTo(w * 0.2, h * 0.4)
-      ..lineTo(w * 0.0, h * 0.5)
-      ..lineTo(w * 0.2, h * 0.6)
-      ..close();
-    canvas.drawPath(fuselage, Paint()..color = TTR.red);
-    canvas.drawPath(fuselage, outline);
-
-    // Upper wing
-    final upperWing = Rect.fromLTWH(w * 0.3, h * 0.18, w * 0.45, h * 0.1);
-    canvas.drawRect(upperWing, Paint()..color = TTR.wood);
-    canvas.drawRect(upperWing, outline);
-    // Lower wing
-    final lowerWing = Rect.fromLTWH(w * 0.3, h * 0.62, w * 0.45, h * 0.1);
-    canvas.drawRect(lowerWing, Paint()..color = TTR.wood);
-    canvas.drawRect(lowerWing, outline);
-
-    // Struts
+    final hull = Paint()..color = TTR.red;
+    final wing = Paint()..color = TTR.wood;
+    final wingTop = Paint()..color = TTR.woodLight;
     final strut = Paint()
       ..color = TTR.ink
       ..strokeWidth = 0.8;
-    canvas.drawLine(Offset(w * 0.4, h * 0.28), Offset(w * 0.4, h * 0.62), strut);
-    canvas.drawLine(
-        Offset(w * 0.65, h * 0.28), Offset(w * 0.65, h * 0.62), strut);
 
-    // Tail fin
-    final tail = Path()
-      ..moveTo(w * 0.15, h * 0.5)
-      ..lineTo(w * 0.0, h * 0.2)
-      ..lineTo(w * 0.18, h * 0.5)
+    // ── Vertical tail fin (drawn first so fuselage covers its base) ──
+    final tailFin = Path()
+      ..moveTo(w * 0.04, h * 0.50)   // base, rear of fuselage
+      ..lineTo(w * 0.12, h * 0.10)   // tip
+      ..lineTo(w * 0.18, h * 0.50)   // base front
       ..close();
-    canvas.drawPath(tail, Paint()..color = TTR.wood);
-    canvas.drawPath(tail, outline);
+    canvas.drawPath(tailFin, hull);
+    canvas.drawPath(tailFin, outline);
 
-    // Propeller
+    // ── Horizontal tail stabilizer ──
+    final hStab = Path()
+      ..moveTo(w * 0.02, h * 0.46)
+      ..lineTo(w * 0.18, h * 0.46)
+      ..lineTo(w * 0.18, h * 0.54)
+      ..lineTo(w * 0.02, h * 0.54)
+      ..close();
+    canvas.drawPath(hStab, wing);
+    canvas.drawPath(hStab, outline);
+
+    // ── Lower wing ──
+    final lowerWing =
+        Rect.fromLTWH(w * 0.22, h * 0.58, w * 0.50, h * 0.09);
+    canvas.drawRect(lowerWing, wing);
+    canvas.drawRect(lowerWing, outline);
+
+    // ── Wheel struts + wheels (under lower wing) ──
+    canvas.drawLine(Offset(w * 0.32, h * 0.67), Offset(w * 0.34, h * 0.84), strut);
+    canvas.drawLine(Offset(w * 0.40, h * 0.67), Offset(w * 0.38, h * 0.84), strut);
+    canvas.drawLine(Offset(w * 0.54, h * 0.67), Offset(w * 0.56, h * 0.84), strut);
+    canvas.drawLine(Offset(w * 0.62, h * 0.67), Offset(w * 0.60, h * 0.84), strut);
+    canvas.drawCircle(
+      Offset(w * 0.36, h * 0.85),
+      h * 0.06,
+      Paint()..color = TTR.ink,
+    );
+    canvas.drawCircle(
+      Offset(w * 0.58, h * 0.85),
+      h * 0.06,
+      Paint()..color = TTR.ink,
+    );
+    // Wheel hubs
+    canvas.drawCircle(
+      Offset(w * 0.36, h * 0.85),
+      h * 0.025,
+      Paint()..color = TTR.brass,
+    );
+    canvas.drawCircle(
+      Offset(w * 0.58, h * 0.85),
+      h * 0.025,
+      Paint()..color = TTR.brass,
+    );
+
+    // ── Fuselage (long cigar with pointed nose, right) ──
+    final fuselage = Path()
+      ..moveTo(w * 0.05, h * 0.50)                        // tail tip
+      ..quadraticBezierTo(w * 0.05, h * 0.42, w * 0.12, h * 0.40)
+      ..lineTo(w * 0.78, h * 0.38)                        // top
+      ..quadraticBezierTo(w * 0.92, h * 0.42, w * 0.94, h * 0.50)
+      ..quadraticBezierTo(w * 0.92, h * 0.58, w * 0.78, h * 0.62)
+      ..lineTo(w * 0.12, h * 0.60)                        // bottom
+      ..quadraticBezierTo(w * 0.05, h * 0.58, w * 0.05, h * 0.50)
+      ..close();
+    canvas.drawPath(fuselage, hull);
+    canvas.drawPath(fuselage, outline);
+
+    // ── Brass trim stripe along the fuselage ──
+    final stripe = Paint()..color = TTR.brass;
+    canvas.drawRect(
+      Rect.fromLTWH(w * 0.10, h * 0.48, w * 0.78, h * 0.04),
+      stripe,
+    );
+
+    // ── Cockpit windshield on TOP of fuselage, just behind the upper wing ──
+    final cockpit = Path()
+      ..moveTo(w * 0.56, h * 0.38)
+      ..quadraticBezierTo(w * 0.61, h * 0.28, w * 0.66, h * 0.38)
+      ..close();
+    canvas.drawPath(cockpit, Paint()..color = TTR.navy);
+    canvas.drawPath(cockpit, outline);
+
+    // ── Struts between wings ──
     canvas.drawLine(
-      Offset(w * 0.95, h * 0.3),
-      Offset(w * 0.95, h * 0.7),
+        Offset(w * 0.30, h * 0.32), Offset(w * 0.30, h * 0.58), strut);
+    canvas.drawLine(
+        Offset(w * 0.46, h * 0.32), Offset(w * 0.46, h * 0.58), strut);
+    canvas.drawLine(
+        Offset(w * 0.62, h * 0.32), Offset(w * 0.62, h * 0.58), strut);
+
+    // ── Upper wing (drawn last so it sits on top of struts & cockpit base) ──
+    final upperWing =
+        Rect.fromLTWH(w * 0.22, h * 0.23, w * 0.50, h * 0.09);
+    canvas.drawRect(upperWing, wingTop);
+    canvas.drawRect(upperWing, outline);
+    // Decorative roundel on upper wing (vintage emblem)
+    canvas.drawCircle(
+      Offset(w * 0.47, h * 0.275),
+      h * 0.03,
+      Paint()..color = TTR.cream,
+    );
+    canvas.drawCircle(
+      Offset(w * 0.47, h * 0.275),
+      h * 0.03,
+      Paint()
+        ..color = TTR.red
+        ..strokeWidth = 1
+        ..style = PaintingStyle.stroke,
+    );
+    canvas.drawCircle(
+      Offset(w * 0.47, h * 0.275),
+      h * 0.012,
+      Paint()..color = TTR.red,
+    );
+
+    // ── Engine cowl (brass disc at the nose) ──
+    canvas.drawCircle(
+      Offset(w * 0.94, h * 0.50),
+      h * 0.12,
+      Paint()..color = TTR.brass,
+    );
+    canvas.drawCircle(Offset(w * 0.94, h * 0.50), h * 0.12, outline);
+
+    // ── Propeller (vertical blade + central hub) ──
+    canvas.drawLine(
+      Offset(w * 0.99, h * 0.20),
+      Offset(w * 0.99, h * 0.80),
       Paint()
         ..color = TTR.ink
-        ..strokeWidth = 1.5,
+        ..strokeWidth = 1.8
+        ..strokeCap = StrokeCap.round,
     );
-
-    // Cockpit
     canvas.drawCircle(
-      Offset(w * 0.6, h * 0.42),
-      h * 0.08,
-      Paint()..color = TTR.navy,
+      Offset(w * 0.99, h * 0.50),
+      1.6,
+      Paint()..color = TTR.ink,
     );
-    canvas.drawCircle(Offset(w * 0.6, h * 0.42), h * 0.08, outline);
   }
 
   @override
