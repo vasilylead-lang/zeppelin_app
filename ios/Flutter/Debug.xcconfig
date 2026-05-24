@@ -1,1 +1,7 @@
 #include "Generated.xcconfig"
+
+// LOCAL: disable codesign on Simulator builds — macOS Tahoe's com.apple.provenance
+// xattr breaks codesign and can't be removed.
+CODE_SIGNING_REQUIRED[sdk=iphonesimulator*] = NO
+CODE_SIGNING_ALLOWED[sdk=iphonesimulator*] = NO
+CODE_SIGN_IDENTITY[sdk=iphonesimulator*] =
