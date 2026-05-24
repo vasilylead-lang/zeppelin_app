@@ -62,8 +62,20 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
   double _heading = 0;
   bool _engineOn = true;
 
+  // Crash state
+  bool _crashed = false;
+  final List<_Debris> _debris = [];
+  double _crashFlash = 0; // 1 → 0 fades after impact
+
   final List<_Plane> _planes = [];
   final Random _rng = Random();
+  Size _skySize = Size.zero;
+
+  // Constants used both for rendering and collision math.
+  static const double _zeppelinW = 180;
+  static const double _zeppelinH = 100;
+  static const double _planeW = 64;
+  static const double _planeH = 40;
 
   late final AnimationController _ticker;
   late final AnimationController _zeppelinBob;
@@ -80,7 +92,7 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
       duration: const Duration(seconds: 4),
     )..repeat(reverse: true);
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 2; i++) {
       _planes.add(_spawnPlane(initial: true));
     }
     _ticker.addListener(_tick);
@@ -97,14 +109,100 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
     );
   }
 
+  Rect _zeppelinRect() {
+    if (_skySize == Size.zero) return Rect.zero;
+    final xPos =
+        (0.5 + _heading * 0.25) * (_skySize.width - _zeppelinW);
+    final yPos = (1 - _altitude) * (_skySize.height - 140);
+    // Hit box smaller than the bounding box (focus on envelope + gondola)
+    return Rect.fromLTWH(
+      xPos + _zeppelinW * 0.05,
+      yPos + _zeppelinH * 0.15,
+      _zeppelinW * 0.85,
+      _zeppelinH * 0.7,
+    );
+  }
+
+  Rect _planeRect(_Plane p) {
+    final w = _planeW * p.scale;
+    final h = _planeH * p.scale;
+    return Rect.fromLTWH(p.x * _skySize.width, p.y * _skySize.height, w, h);
+  }
+
   void _tick() {
     setState(() {
-      for (final p in _planes) {
-        p.x += p.goingRight ? p.speed : -p.speed;
+      if (!_crashed) {
+        for (final p in _planes) {
+          p.x += p.goingRight ? p.speed : -p.speed;
+        }
+        _planes.removeWhere((p) => p.x < -0.2 || p.x > 1.2);
+        if (_planes.length < 3 && _rng.nextDouble() < 0.015) {
+          _planes.add(_spawnPlane());
+        }
+
+        // Collision check
+        if (_skySize != Size.zero) {
+          final zRect = _zeppelinRect();
+          for (final p in _planes) {
+            if (zRect.overlaps(_planeRect(p))) {
+              _triggerCrash(zRect.center);
+              break;
+            }
+          }
+        }
+      } else {
+        // Debris physics
+        for (final d in _debris) {
+          d.vy += 0.45; // gravity
+          d.x += d.vx;
+          d.y += d.vy;
+          d.rotation += d.spin;
+          d.life -= 1;
+        }
+        _debris.removeWhere((d) =>
+            d.y > _skySize.height + 60 || d.life <= 0);
+        _crashFlash = (_crashFlash - 0.04).clamp(0.0, 1.0);
       }
-      _planes.removeWhere((p) => p.x < -0.2 || p.x > 1.2);
-      if (_planes.length < 5 && _rng.nextDouble() < 0.02) {
-        _planes.add(_spawnPlane());
+    });
+  }
+
+  void _triggerCrash(Offset origin) {
+    _crashed = true;
+    _crashFlash = 1.0;
+    _engineOn = false;
+    _debris.clear();
+    // Spawn debris pieces around impact point
+    const kinds = _DebrisKind.values;
+    for (int i = 0; i < 18; i++) {
+      final kind = kinds[i % kinds.length];
+      final ang = _rng.nextDouble() * 2 * pi;
+      final v = 3 + _rng.nextDouble() * 5;
+      _debris.add(_Debris(
+        x: origin.dx + (_rng.nextDouble() - 0.5) * 40,
+        y: origin.dy + (_rng.nextDouble() - 0.5) * 30,
+        vx: cos(ang) * v,
+        vy: sin(ang) * v - 4, // bias upward initially
+        rotation: _rng.nextDouble() * 2 * pi,
+        spin: (_rng.nextDouble() - 0.5) * 0.3,
+        kind: kind,
+        size: 8 + _rng.nextDouble() * 14,
+        life: 180,
+      ));
+    }
+  }
+
+  void _reset() {
+    setState(() {
+      _crashed = false;
+      _debris.clear();
+      _crashFlash = 0;
+      _engineOn = true;
+      _altitude = 0.5;
+      _throttle = 0.4;
+      _heading = 0;
+      _planes.clear();
+      for (int i = 0; i < 2; i++) {
+        _planes.add(_spawnPlane(initial: true));
       }
     });
   }
@@ -138,68 +236,108 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
                         ),
                       ],
                     ),
-                    child: Stack(
-                      children: [
-                        // Vintage sky gradient
-                        Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Color(0xFFC9B98A),
-                                Color(0xFFE8D5A8),
-                                Color(0xFFE0A878),
-                              ],
-                              stops: [0.0, 0.55, 1.0],
-                            ),
-                          ),
-                        ),
-                        const _PaperGrain(),
-                        ..._buildClouds(constraints),
-                        ..._planes.map((p) => _buildPlane(p, constraints)),
-                        AnimatedBuilder(
-                          animation: _zeppelinBob,
-                          builder: (context, child) {
-                            final bob = sin(_zeppelinBob.value * 2 * pi) * 8;
-                            final yPos = (1 - _altitude) *
-                                    (constraints.maxHeight - 140) +
-                                bob;
-                            final xPos = (0.5 + _heading * 0.25) *
-                                (constraints.maxWidth - 180);
-                            return Positioned(
-                              left: xPos,
-                              top: yPos,
-                              child: _ZeppelinWidget(
-                                engineOn: _engineOn,
-                                throttle: _throttle,
+                    child: LayoutBuilder(
+                      builder: (context, sky) {
+                        // Update collision-math size for the next tick
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          final s = Size(sky.maxWidth, sky.maxHeight);
+                          if (_skySize != s) _skySize = s;
+                        });
+                        return Stack(
+                          children: [
+                            // Vintage sky gradient
+                            Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Color(0xFFC9B98A),
+                                    Color(0xFFE8D5A8),
+                                    Color(0xFFE0A878),
+                                  ],
+                                  stops: [0.0, 0.55, 1.0],
+                                ),
                               ),
-                            );
-                          },
-                        ),
-                        const Positioned(
-                          right: 14,
-                          top: 14,
-                          child: _CompassRose(),
-                        ),
-                        const Positioned(
-                          top: 12,
-                          left: 0,
-                          right: 0,
-                          child: Center(child: _TitleBanner()),
-                        ),
-                        Positioned(
-                          left: 14,
-                          bottom: 14,
-                          child: _Hud(
-                            altitude: _altitude,
-                            throttle: _throttle,
-                            heading: _heading,
-                            engineOn: _engineOn,
-                            planes: _planes.length,
-                          ),
-                        ),
-                      ],
+                            ),
+                            const _PaperGrain(),
+                            ..._buildClouds(sky),
+                            ..._planes.map((p) => _buildPlane(p, sky)),
+                            if (!_crashed)
+                              AnimatedBuilder(
+                                animation: _zeppelinBob,
+                                builder: (context, child) {
+                                  final bob =
+                                      sin(_zeppelinBob.value * 2 * pi) * 8;
+                                  final yPos = (1 - _altitude) *
+                                          (sky.maxHeight - 140) +
+                                      bob;
+                                  final xPos = (0.5 + _heading * 0.25) *
+                                      (sky.maxWidth - _zeppelinW);
+                                  return Positioned(
+                                    left: xPos,
+                                    top: yPos,
+                                    child: _ZeppelinWidget(
+                                      engineOn: _engineOn,
+                                      throttle: _throttle,
+                                    ),
+                                  );
+                                },
+                              ),
+                            // Debris on top
+                            if (_crashed)
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: CustomPaint(
+                                    painter: _DebrisPainter(_debris),
+                                  ),
+                                ),
+                              ),
+                            // White impact flash
+                            if (_crashFlash > 0)
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: Container(
+                                    color: Colors.white.withValues(
+                                      alpha: _crashFlash * 0.7,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            const Positioned(
+                              right: 14,
+                              top: 14,
+                              child: _CompassRose(),
+                            ),
+                            const Positioned(
+                              top: 12,
+                              left: 0,
+                              right: 0,
+                              child: Center(child: _TitleBanner()),
+                            ),
+                            Positioned(
+                              left: 14,
+                              bottom: 14,
+                              child: _Hud(
+                                altitude: _altitude,
+                                throttle: _throttle,
+                                heading: _heading,
+                                engineOn: _engineOn,
+                                planes: _planes.length,
+                                crashed: _crashed,
+                              ),
+                            ),
+                            // Crash banner + reset
+                            if (_crashed)
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                top: sky.maxHeight * 0.38,
+                                child: Center(child: _CrashBanner(onReset: _reset)),
+                              ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -264,6 +402,201 @@ class _Plane {
     required this.goingRight,
     required this.scale,
   });
+}
+
+// ─── Debris ─────────────────────────────────────────────────────────────────
+
+enum _DebrisKind { envelope, gondola, propeller, fin, window, plank }
+
+class _Debris {
+  double x, y, vx, vy, rotation, spin, size;
+  int life;
+  _DebrisKind kind;
+  _Debris({
+    required this.x,
+    required this.y,
+    required this.vx,
+    required this.vy,
+    required this.rotation,
+    required this.spin,
+    required this.kind,
+    required this.size,
+    required this.life,
+  });
+}
+
+class _DebrisPainter extends CustomPainter {
+  final List<_Debris> debris;
+  _DebrisPainter(this.debris);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final outline = Paint()
+      ..color = TTR.ink
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+    for (final d in debris) {
+      canvas.save();
+      canvas.translate(d.x, d.y);
+      canvas.rotate(d.rotation);
+      final fade = (d.life / 180).clamp(0.0, 1.0);
+      switch (d.kind) {
+        case _DebrisKind.envelope:
+          // Cream chunk
+          final rect = Rect.fromCenter(
+            center: Offset.zero,
+            width: d.size * 1.6,
+            height: d.size * 0.9,
+          );
+          canvas.drawOval(
+            rect,
+            Paint()..color = TTR.cream.withValues(alpha: fade),
+          );
+          canvas.drawOval(rect, outline);
+          break;
+        case _DebrisKind.gondola:
+          final rect = Rect.fromCenter(
+            center: Offset.zero,
+            width: d.size * 1.4,
+            height: d.size * 0.7,
+          );
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(rect, const Radius.circular(3)),
+            Paint()..color = TTR.wood.withValues(alpha: fade),
+          );
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(rect, const Radius.circular(3)),
+            outline,
+          );
+          break;
+        case _DebrisKind.propeller:
+          final p = Paint()
+            ..color = TTR.brass.withValues(alpha: fade)
+            ..strokeWidth = 2.5
+            ..strokeCap = StrokeCap.round;
+          canvas.drawLine(
+            Offset(-d.size, 0),
+            Offset(d.size, 0),
+            p,
+          );
+          canvas.drawCircle(
+            Offset.zero,
+            3,
+            Paint()..color = TTR.ink.withValues(alpha: fade),
+          );
+          break;
+        case _DebrisKind.fin:
+          final path = Path()
+            ..moveTo(-d.size * 0.6, d.size * 0.5)
+            ..lineTo(d.size * 0.6, 0)
+            ..lineTo(-d.size * 0.6, -d.size * 0.5)
+            ..close();
+          canvas.drawPath(
+            path,
+            Paint()..color = TTR.red.withValues(alpha: fade),
+          );
+          canvas.drawPath(path, outline);
+          break;
+        case _DebrisKind.window:
+          canvas.drawCircle(
+            Offset.zero,
+            d.size * 0.4,
+            Paint()..color = TTR.mustard.withValues(alpha: fade),
+          );
+          canvas.drawCircle(Offset.zero, d.size * 0.4, outline);
+          break;
+        case _DebrisKind.plank:
+          final rect = Rect.fromCenter(
+            center: Offset.zero,
+            width: d.size * 1.8,
+            height: d.size * 0.3,
+          );
+          canvas.drawRect(
+            rect,
+            Paint()..color = TTR.woodLight.withValues(alpha: fade),
+          );
+          canvas.drawRect(rect, outline);
+          break;
+      }
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DebrisPainter old) => true;
+}
+
+// ─── Crash banner ───────────────────────────────────────────────────────────
+
+class _CrashBanner extends StatelessWidget {
+  final VoidCallback onReset;
+  const _CrashBanner({required this.onReset});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 18),
+      decoration: BoxDecoration(
+        color: TTR.cream,
+        border: Border.all(color: TTR.ink, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: TTR.ink.withValues(alpha: 0.45),
+            blurRadius: 10,
+            offset: const Offset(3, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            '✦  EXPEDITION  LOST  ✦',
+            style: TextStyle(
+              color: TTR.red,
+              fontFamily: 'Georgia',
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'The airship has collided with an aircraft.',
+            style: TextStyle(
+              color: TTR.ink,
+              fontFamily: 'Georgia',
+              fontStyle: FontStyle.italic,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 14),
+          ElevatedButton(
+            onPressed: onReset,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: TTR.green,
+              foregroundColor: TTR.cream,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.zero,
+                side: const BorderSide(color: TTR.ink, width: 2),
+              ),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+            ),
+            child: const Text(
+              'COMMISSION  NEW  AIRSHIP',
+              style: TextStyle(
+                fontFamily: 'Georgia',
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ─── Title banner ───────────────────────────────────────────────────────────
@@ -809,6 +1142,7 @@ class _Hud extends StatelessWidget {
   final double altitude, throttle, heading;
   final bool engineOn;
   final int planes;
+  final bool crashed;
 
   const _Hud({
     required this.altitude,
@@ -816,6 +1150,7 @@ class _Hud extends StatelessWidget {
     required this.heading,
     required this.engineOn,
     required this.planes,
+    this.crashed = false,
   });
 
   @override
@@ -854,7 +1189,9 @@ class _Hud extends StatelessWidget {
                 border: Border.all(color: TTR.ink, width: 1),
               ),
               child: Text(
-                engineOn ? 'IN  FLIGHT' : 'GROUNDED',
+                crashed
+                    ? 'WRECKED'
+                    : (engineOn ? 'IN  FLIGHT' : 'GROUNDED'),
                 style: const TextStyle(
                   color: TTR.cream,
                   fontFamily: 'Georgia',
