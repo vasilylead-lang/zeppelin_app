@@ -1305,7 +1305,6 @@ class _Hud extends StatelessWidget {
                 ),
               ),
             ),
-            const _HudRow(label: 'AIRSHIP', value: 'HMS-I'),
             _HudRow(label: 'ALTITUDE', value: '${_pad(altMeters, 4)} m'),
             _HudRow(label: 'SPEED', value: '${_pad(speed, 3)} km/h'),
             _HudRow(
