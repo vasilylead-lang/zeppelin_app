@@ -57,10 +57,18 @@ class ZeppelinControlPage extends StatefulWidget {
 
 class _ZeppelinControlPageState extends State<ZeppelinControlPage>
     with TickerProviderStateMixin {
+  // Actual airship state (the slow, real-world values shown on instruments)
   double _altitude = 0.5;
   double _throttle = 0.4;
   double _heading = 0;
+  // Commanded targets the bridge sliders set — the airship eases toward these
+  double _altitudeTarget = 0.5;
+  double _throttleTarget = 0.4;
+  double _headingTarget = 0;
   bool _engineOn = true;
+
+  // Per-tick easing factor — ~2 sec to converge ( (1-_smooth)^120 ≈ 0.03 )
+  static const double _smooth = 0.03;
 
   // Crash state
   bool _crashed = false;
@@ -130,6 +138,12 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
   void _tick() {
     setState(() {
       if (!_crashed) {
+        // Ease real-world values toward commanded targets
+        _altitude += (_altitudeTarget - _altitude) * _smooth;
+        _heading += (_headingTarget - _heading) * _smooth;
+        final effectiveThrottle = _engineOn ? _throttleTarget : 0.0;
+        _throttle += (effectiveThrottle - _throttle) * _smooth;
+
         for (final p in _planes) {
           p.x += p.goingRight ? p.speed : -p.speed;
         }
@@ -198,6 +212,9 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
       _altitude = 0.5;
       _throttle = 0.4;
       _heading = 0;
+      _altitudeTarget = 0.5;
+      _throttleTarget = 0.4;
+      _headingTarget = 0;
       _planes.clear();
       // Reset to empty sky — planes will arrive again on their own.
     });
@@ -339,13 +356,13 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
                   ),
                 ),
                 _ControlPanel(
-                  altitude: _altitude,
-                  throttle: _throttle,
-                  heading: _heading,
+                  altitude: _altitudeTarget,
+                  throttle: _throttleTarget,
+                  heading: _headingTarget,
                   engineOn: _engineOn,
-                  onAltitude: (v) => setState(() => _altitude = v),
-                  onThrottle: (v) => setState(() => _throttle = v),
-                  onHeading: (v) => setState(() => _heading = v),
+                  onAltitude: (v) => setState(() => _altitudeTarget = v),
+                  onThrottle: (v) => setState(() => _throttleTarget = v),
+                  onHeading: (v) => setState(() => _headingTarget = v),
                   onEngine: (v) => setState(() => _engineOn = v),
                 ),
               ],
