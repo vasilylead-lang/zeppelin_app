@@ -223,19 +223,20 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
 
   List<Widget> _buildClouds(BoxConstraints c) {
     const cloudOffsets = [
-      [0.1, 0.15, 1.0],
-      [0.4, 0.25, 1.4],
-      [0.75, 0.1, 0.9],
-      [0.6, 0.4, 1.1],
-      [0.15, 0.55, 1.2],
+      [0.05, 0.18, 1.0],
+      [0.38, 0.28, 1.3],
+      [0.72, 0.12, 0.95],
+      [0.55, 0.45, 1.15],
+      [0.12, 0.58, 1.05],
     ];
-    return cloudOffsets.map((o) {
+    return List.generate(cloudOffsets.length, (i) {
+      final o = cloudOffsets[i];
       return Positioned(
         left: o[0] * c.maxWidth,
         top: o[1] * c.maxHeight,
-        child: Opacity(opacity: 0.75, child: _Cloud(scale: o[2])),
+        child: Opacity(opacity: 0.85, child: _Cloud(scale: o[2], seed: i * 17)),
       );
-    }).toList();
+    });
   }
 
   Widget _buildPlane(_Plane p, BoxConstraints c) {
@@ -666,42 +667,140 @@ class _BiplanePainter extends CustomPainter {
 
 class _Cloud extends StatelessWidget {
   final double scale;
-  const _Cloud({required this.scale});
+  final int seed;
+  const _Cloud({required this.scale, this.seed = 0});
   @override
   Widget build(BuildContext context) {
     return Transform.scale(
       scale: scale,
       child: SizedBox(
-        width: 92,
-        height: 40,
-        child: CustomPaint(painter: _CloudPainter()),
+        width: 120,
+        height: 52,
+        child: CustomPaint(painter: _CloudPainter(seed: seed)),
       ),
     );
   }
 }
 
 class _CloudPainter extends CustomPainter {
+  final int seed;
+  _CloudPainter({required this.seed});
+
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
-    final path = Path()
-      ..addOval(Rect.fromCircle(center: Offset(w * 0.25, h * 0.55), radius: 14))
-      ..addOval(Rect.fromCircle(center: Offset(w * 0.5, h * 0.4), radius: 18))
-      ..addOval(Rect.fromCircle(center: Offset(w * 0.78, h * 0.55), radius: 14))
-      ..addRect(Rect.fromLTWH(w * 0.25, h * 0.55, w * 0.55, 8));
-    canvas.drawPath(path, Paint()..color = TTR.cream);
+    final rng = Random(seed);
+
+    // Build a soft puffy silhouette as one continuous path along a flat
+    // base with rounded bumps on top — no visible "stripe" artefact.
+    final baseY = h * 0.78;
+    // Bump centers (x fraction, top-y fraction, radius fraction of width)
+    final bumps = <List<double>>[
+      [0.12, 0.55, 0.10],
+      [0.28, 0.32, 0.16],
+      [0.48, 0.18, 0.20],
+      [0.68, 0.30, 0.17],
+      [0.86, 0.55, 0.11],
+    ];
+    // Add slight jitter so each cloud looks unique
+    for (final b in bumps) {
+      b[0] += (rng.nextDouble() - 0.5) * 0.02;
+      b[1] += (rng.nextDouble() - 0.5) * 0.04;
+      b[2] *= 0.92 + rng.nextDouble() * 0.16;
+    }
+
+    final path = Path();
+    final leftX = bumps.first[0] * w;
+    path.moveTo(leftX, baseY);
+    // Left-side curl up to first bump
+    path.quadraticBezierTo(leftX - 6, baseY - 6, leftX - 2, baseY - 14);
+
+    for (var i = 0; i < bumps.length; i++) {
+      final b = bumps[i];
+      final cx = b[0] * w;
+      final cy = b[1] * h;
+      final r = b[2] * w;
+      // Arc over each bump (top semicircle approximation via cubic)
+      final startX = cx - r;
+      final endX = cx + r;
+      path.cubicTo(
+        startX, cy - r * 0.1, // control 1: pull up on left
+        cx - r * 0.6, cy - r, // control 2: top-left
+        cx, cy - r,            // bump apex
+      );
+      path.cubicTo(
+        cx + r * 0.6, cy - r,
+        endX, cy - r * 0.1,
+        endX, cy + r * 0.4,
+      );
+      // Dip between bumps
+      if (i < bumps.length - 1) {
+        final nb = bumps[i + 1];
+        final ncx = nb[0] * w;
+        final ncr = nb[2] * w;
+        final dipMidX = (endX + (ncx - ncr)) / 2;
+        final dipY = max(baseY - 8, max(cy + r * 0.4, nb[1] * h + ncr * 0.3));
+        path.quadraticBezierTo(dipMidX, dipY, ncx - ncr, nb[1] * h + ncr * 0.4);
+      }
+    }
+    // Right tail back down to base
+    final rightX = bumps.last[0] * w;
+    final lastR = bumps.last[2] * w;
+    path.quadraticBezierTo(
+      rightX + lastR + 4, baseY - 4,
+      rightX + lastR - 2, baseY,
+    );
+    // Flat-ish underside
+    path.lineTo(leftX, baseY);
+    path.close();
+
+    // Soft drop shadow underneath
+    canvas.drawPath(
+      path.shift(const Offset(2, 3)),
+      Paint()
+        ..color = TTR.ink.withValues(alpha: 0.10)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+    );
+
+    // Fill — subtle vertical gradient (cream top → warm beige bottom)
     canvas.drawPath(
       path,
       Paint()
-        ..color = TTR.inkLight.withValues(alpha: 0.7)
-        ..strokeWidth = 1
-        ..style = PaintingStyle.stroke,
+        ..shader = LinearGradient(
+          colors: [TTR.cream, TTR.parchment.withValues(alpha: 0.9)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(Rect.fromLTWH(0, 0, w, h)),
+    );
+
+    // Inked outline — slightly varied weight for hand-drawn feel
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = TTR.inkLight.withValues(alpha: 0.75)
+        ..strokeWidth = 1.2
+        ..style = PaintingStyle.stroke
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Inner highlight curve (catches the sunset light)
+    final hi = Path();
+    hi.moveTo(w * 0.22, h * 0.50);
+    hi.quadraticBezierTo(w * 0.38, h * 0.28, w * 0.55, h * 0.28);
+    canvas.drawPath(
+      hi,
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.55)
+        ..strokeWidth = 1.4
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
     );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter old) => false;
+  bool shouldRepaint(covariant _CloudPainter old) => old.seed != seed;
 }
 
 // ─── Vintage HUD (passport ticket) ──────────────────────────────────────────
