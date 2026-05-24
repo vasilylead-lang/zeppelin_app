@@ -5,6 +5,23 @@ void main() {
   runApp(const ZeppelinApp());
 }
 
+// ─── Ticket-to-Ride palette ─────────────────────────────────────────────────
+class TTR {
+  static const cream = Color(0xFFF4E8C9);
+  static const parchment = Color(0xFFE8D5A8);
+  static const aged = Color(0xFFD4B775);
+  static const ink = Color(0xFF3D2817);
+  static const inkLight = Color(0xFF6B4423);
+  static const red = Color(0xFFC8362D);
+  static const green = Color(0xFF2F5233);
+  static const navy = Color(0xFF1F3A5F);
+  static const mustard = Color(0xFFD4A02A);
+  static const brass = Color(0xFFB8860B);
+  static const brassLight = Color(0xFFE6B84A);
+  static const wood = Color(0xFF5C3A21);
+  static const woodLight = Color(0xFF8B5A2B);
+}
+
 class ZeppelinApp extends StatelessWidget {
   const ZeppelinApp({super.key});
 
@@ -15,9 +32,15 @@ class ZeppelinApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
+        scaffoldBackgroundColor: TTR.cream,
+        textTheme: const TextTheme().apply(
+          fontFamily: 'Georgia',
+          bodyColor: TTR.ink,
+          displayColor: TTR.ink,
+        ),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFB8860B),
-          brightness: Brightness.dark,
+          seedColor: TTR.red,
+          brightness: Brightness.light,
         ),
       ),
       home: const ZeppelinControlPage(),
@@ -34,13 +57,11 @@ class ZeppelinControlPage extends StatefulWidget {
 
 class _ZeppelinControlPageState extends State<ZeppelinControlPage>
     with TickerProviderStateMixin {
-  // Zeppelin state
-  double _altitude = 0.5; // 0 (ground) → 1 (max)
-  double _throttle = 0.4; // 0 → 1
-  double _heading = 0; // -1 (left) → 1 (right)
+  double _altitude = 0.5;
+  double _throttle = 0.4;
+  double _heading = 0;
   bool _engineOn = true;
 
-  // Airplane fleet
   final List<_Plane> _planes = [];
   final Random _rng = Random();
 
@@ -59,11 +80,9 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
       duration: const Duration(seconds: 4),
     )..repeat(reverse: true);
 
-    // Seed initial planes
     for (int i = 0; i < 4; i++) {
       _planes.add(_spawnPlane(initial: true));
     }
-
     _ticker.addListener(_tick);
   }
 
@@ -107,63 +126,83 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
               children: [
                 // Sky scene
                 Expanded(
-                  child: Stack(
-                    children: [
-                      // Sky gradient
-                      Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Color(0xFF1E3A5F),
-                              Color(0xFF4A90B8),
-                              Color(0xFFE8B87C),
-                            ],
-                            stops: [0.0, 0.6, 1.0],
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(10, 10, 10, 6),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: TTR.ink, width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: TTR.ink.withValues(alpha: 0.25),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        // Vintage sky gradient
+                        Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Color(0xFFC9B98A),
+                                Color(0xFFE8D5A8),
+                                Color(0xFFE0A878),
+                              ],
+                              stops: [0.0, 0.55, 1.0],
+                            ),
                           ),
                         ),
-                      ),
-                      // Clouds (parallax)
-                      ..._buildClouds(constraints),
-                      // Planes
-                      ..._planes.map((p) => _buildPlane(p, constraints)),
-                      // Zeppelin
-                      AnimatedBuilder(
-                        animation: _zeppelinBob,
-                        builder: (context, child) {
-                          final bob = sin(_zeppelinBob.value * 2 * pi) * 8;
-                          final yPos = (1 - _altitude) *
-                              (constraints.maxHeight - 120) +
-                              bob;
-                          final xPos = (0.5 + _heading * 0.25) *
-                              (constraints.maxWidth - 160);
-                          return Positioned(
-                            left: xPos,
-                            top: yPos,
-                            child: _ZeppelinWidget(
-                              engineOn: _engineOn,
-                              throttle: _throttle,
-                            ),
-                          );
-                        },
-                      ),
-                      // HUD overlay
-                      Positioned(
-                        top: 12,
-                        left: 12,
-                        child: _Hud(
-                          altitude: _altitude,
-                          throttle: _throttle,
-                          heading: _heading,
-                          engineOn: _engineOn,
-                          planes: _planes.length,
+                        const _PaperGrain(),
+                        ..._buildClouds(constraints),
+                        ..._planes.map((p) => _buildPlane(p, constraints)),
+                        AnimatedBuilder(
+                          animation: _zeppelinBob,
+                          builder: (context, child) {
+                            final bob = sin(_zeppelinBob.value * 2 * pi) * 8;
+                            final yPos = (1 - _altitude) *
+                                    (constraints.maxHeight - 140) +
+                                bob;
+                            final xPos = (0.5 + _heading * 0.25) *
+                                (constraints.maxWidth - 180);
+                            return Positioned(
+                              left: xPos,
+                              top: yPos,
+                              child: _ZeppelinWidget(
+                                engineOn: _engineOn,
+                                throttle: _throttle,
+                              ),
+                            );
+                          },
                         ),
-                      ),
-                    ],
+                        const Positioned(
+                          right: 14,
+                          top: 14,
+                          child: _CompassRose(),
+                        ),
+                        const Positioned(
+                          top: 12,
+                          left: 0,
+                          right: 0,
+                          child: Center(child: _TitleBanner()),
+                        ),
+                        Positioned(
+                          left: 14,
+                          bottom: 14,
+                          child: _Hud(
+                            altitude: _altitude,
+                            throttle: _throttle,
+                            heading: _heading,
+                            engineOn: _engineOn,
+                            planes: _planes.length,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                // Control panel
                 _ControlPanel(
                   altitude: _altitude,
                   throttle: _throttle,
@@ -183,21 +222,18 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
   }
 
   List<Widget> _buildClouds(BoxConstraints c) {
-    final cloudOffsets = [
+    const cloudOffsets = [
       [0.1, 0.15, 1.0],
       [0.4, 0.25, 1.4],
       [0.75, 0.1, 0.9],
       [0.6, 0.4, 1.1],
-      [0.15, 0.5, 1.2],
+      [0.15, 0.55, 1.2],
     ];
     return cloudOffsets.map((o) {
       return Positioned(
         left: o[0] * c.maxWidth,
         top: o[1] * c.maxHeight,
-        child: Opacity(
-          opacity: 0.6,
-          child: _Cloud(scale: o[2]),
-        ),
+        child: Opacity(opacity: 0.75, child: _Cloud(scale: o[2])),
       );
     }).toList();
   }
@@ -210,7 +246,7 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
         scale: p.scale,
         child: Transform.flip(
           flipX: !p.goingRight,
-          child: const _Airplane(),
+          child: const _Biplane(),
         ),
       ),
     );
@@ -218,11 +254,8 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
 }
 
 class _Plane {
-  double x;
-  double y;
-  double speed;
+  double x, y, speed, scale;
   bool goingRight;
-  double scale;
   _Plane({
     required this.x,
     required this.y,
@@ -232,18 +265,165 @@ class _Plane {
   });
 }
 
-// ─── Zeppelin ────────────────────────────────────────────────────────────────
+// ─── Title banner ───────────────────────────────────────────────────────────
+
+class _TitleBanner extends StatelessWidget {
+  const _TitleBanner();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 6),
+      decoration: BoxDecoration(
+        color: TTR.red,
+        border: Border.all(color: TTR.ink, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: TTR.ink.withValues(alpha: 0.4),
+            blurRadius: 4,
+            offset: const Offset(2, 3),
+          ),
+        ],
+      ),
+      child: const Text(
+        '✦  Z E P P E L I N    C O M M A N D  ✦',
+        style: TextStyle(
+          color: TTR.cream,
+          fontFamily: 'Georgia',
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+          letterSpacing: 1.5,
+          shadows: [Shadow(color: TTR.ink, offset: Offset(1, 1))],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Paper grain ────────────────────────────────────────────────────────────
+
+class _PaperGrain extends StatelessWidget {
+  const _PaperGrain();
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: IgnorePointer(child: CustomPaint(painter: _PaperGrainPainter())),
+    );
+  }
+}
+
+class _PaperGrainPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = TTR.inkLight.withValues(alpha: 0.04);
+    final rng = Random(42);
+    for (int i = 0; i < 80; i++) {
+      final x = rng.nextDouble() * size.width;
+      final y = rng.nextDouble() * size.height;
+      canvas.drawCircle(Offset(x, y), rng.nextDouble() * 1.2, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
+}
+
+// ─── Compass rose ───────────────────────────────────────────────────────────
+
+class _CompassRose extends StatelessWidget {
+  const _CompassRose();
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 64,
+      height: 64,
+      child: CustomPaint(painter: _CompassPainter()),
+    );
+  }
+}
+
+class _CompassPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = Offset(size.width / 2, size.height / 2);
+    final r = size.width / 2 - 2;
+    final outline = Paint()
+      ..color = TTR.ink
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+    canvas.drawCircle(c, r, Paint()..color = TTR.cream.withValues(alpha: 0.85));
+    canvas.drawCircle(c, r, outline);
+    canvas.drawCircle(
+      c,
+      r - 4,
+      Paint()
+        ..color = TTR.ink
+        ..strokeWidth = 0.8
+        ..style = PaintingStyle.stroke,
+    );
+
+    final dirOutline = Paint()
+      ..color = TTR.ink
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+    for (int i = 0; i < 4; i++) {
+      final a = i * pi / 2;
+      final tip = Offset(c.dx + sin(a) * r, c.dy - cos(a) * r);
+      final lb = Offset(c.dx + sin(a + pi / 2) * 5, c.dy - cos(a + pi / 2) * 5);
+      final rb = Offset(c.dx + sin(a - pi / 2) * 5, c.dy - cos(a - pi / 2) * 5);
+      final path = Path()
+        ..moveTo(tip.dx, tip.dy)
+        ..lineTo(lb.dx, lb.dy)
+        ..lineTo(rb.dx, rb.dy)
+        ..close();
+      canvas.drawPath(path, Paint()..color = i == 0 ? TTR.red : TTR.ink);
+      canvas.drawPath(path, dirOutline);
+    }
+    for (int i = 0; i < 4; i++) {
+      final a = pi / 4 + i * pi / 2;
+      final tip = Offset(c.dx + sin(a) * (r - 8), c.dy - cos(a) * (r - 8));
+      final lb = Offset(c.dx + sin(a + pi / 2) * 3, c.dy - cos(a + pi / 2) * 3);
+      final rb = Offset(c.dx + sin(a - pi / 2) * 3, c.dy - cos(a - pi / 2) * 3);
+      final path = Path()
+        ..moveTo(tip.dx, tip.dy)
+        ..lineTo(lb.dx, lb.dy)
+        ..lineTo(rb.dx, rb.dy)
+        ..close();
+      canvas.drawPath(path, Paint()..color = TTR.parchment);
+      canvas.drawPath(path, dirOutline);
+    }
+    canvas.drawCircle(c, 2.5, Paint()..color = TTR.brass);
+    canvas.drawCircle(c, 2.5, dirOutline);
+
+    final tp = TextPainter(
+      text: const TextSpan(
+        text: 'N',
+        style: TextStyle(
+          color: TTR.cream,
+          fontSize: 8,
+          fontWeight: FontWeight.bold,
+          fontFamily: 'Georgia',
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset(c.dx - tp.width / 2, c.dy - r + 0.5));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
+}
+
+// ─── Zeppelin ───────────────────────────────────────────────────────────────
 
 class _ZeppelinWidget extends StatelessWidget {
   final bool engineOn;
   final double throttle;
   const _ZeppelinWidget({required this.engineOn, required this.throttle});
-
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 160,
-      height: 90,
+      width: 180,
+      height: 100,
       child: CustomPaint(
         painter: _ZeppelinPainter(engineOn: engineOn, throttle: throttle),
       ),
@@ -261,59 +441,138 @@ class _ZeppelinPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // Envelope (the big balloon)
     final envelopeRect = Rect.fromLTWH(w * 0.05, h * 0.15, w * 0.85, h * 0.5);
-    final envelopePaint = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFFD9D2B6), Color(0xFF8C7E5A)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(envelopeRect);
+    final envelopeRR =
+        RRect.fromRectAndRadius(envelopeRect, Radius.circular(h * 0.25));
     canvas.drawRRect(
-      RRect.fromRectAndRadius(envelopeRect, Radius.circular(h * 0.25)),
-      envelopePaint,
+      envelopeRR,
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0xFFF4E8C9), Color(0xFFB89968)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(envelopeRect),
+    );
+    canvas.drawRRect(
+      envelopeRR,
+      Paint()
+        ..color = TTR.ink
+        ..strokeWidth = 1.5
+        ..style = PaintingStyle.stroke,
     );
 
-    // Stripe
-    final stripe = Paint()..color = const Color(0xFFB8860B);
+    // Decorative stripes
     canvas.drawRect(
-      Rect.fromLTWH(w * 0.05, h * 0.38, w * 0.85, h * 0.04),
-      stripe,
+      Rect.fromLTWH(w * 0.05, h * 0.32, w * 0.85, h * 0.04),
+      Paint()..color = TTR.red,
     );
+    canvas.drawRect(
+      Rect.fromLTWH(w * 0.05, h * 0.44, w * 0.85, h * 0.025),
+      Paint()..color = TTR.brass,
+    );
+
+    // Star emblem
+    _drawStar(canvas, Offset(w * 0.48, h * 0.38), 6, TTR.cream, TTR.ink);
 
     // Tail fin
     final fin = Path()
-      ..moveTo(w * 0.08, h * 0.4)
-      ..lineTo(w * 0.0, h * 0.15)
-      ..lineTo(w * 0.0, h * 0.7)
+      ..moveTo(w * 0.1, h * 0.4)
+      ..lineTo(w * 0.0, h * 0.12)
+      ..lineTo(w * 0.0, h * 0.72)
       ..close();
-    canvas.drawPath(fin, Paint()..color = const Color(0xFF6B5D3A));
+    canvas.drawPath(fin, Paint()..color = TTR.wood);
+    canvas.drawPath(
+      fin,
+      Paint()
+        ..color = TTR.ink
+        ..strokeWidth = 1
+        ..style = PaintingStyle.stroke,
+    );
 
     // Gondola
     final gondolaRect = Rect.fromLTWH(w * 0.32, h * 0.68, w * 0.36, h * 0.18);
+    final gondolaRR =
+        RRect.fromRectAndRadius(gondolaRect, Radius.circular(h * 0.06));
+    canvas.drawRRect(gondolaRR, Paint()..color = TTR.wood);
     canvas.drawRRect(
-      RRect.fromRectAndRadius(gondolaRect, Radius.circular(h * 0.06)),
-      Paint()..color = const Color(0xFF3A3A3A),
+      gondolaRR,
+      Paint()
+        ..color = TTR.ink
+        ..strokeWidth = 1.5
+        ..style = PaintingStyle.stroke,
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(w * 0.32, h * 0.74, w * 0.36, h * 0.015),
+      Paint()..color = TTR.brass,
     );
 
-    // Windows
-    final winPaint = Paint()..color = const Color(0xFFFFE680);
+    // Lamp windows
+    final winOutline = Paint()
+      ..color = TTR.ink
+      ..strokeWidth = 0.6
+      ..style = PaintingStyle.stroke;
     for (int i = 0; i < 4; i++) {
-      canvas.drawCircle(
-        Offset(w * (0.38 + i * 0.08), h * 0.77),
-        h * 0.025,
-        winPaint,
+      final pos = Offset(w * (0.38 + i * 0.08), h * 0.79);
+      canvas.drawCircle(pos, h * 0.025, Paint()..color = TTR.mustard);
+      canvas.drawCircle(pos, h * 0.025, winOutline);
+    }
+
+    // Ropes
+    final rope = Paint()
+      ..color = TTR.ink
+      ..strokeWidth = 0.6;
+    for (final x in [0.36, 0.5, 0.64]) {
+      canvas.drawLine(
+        Offset(w * x, h * 0.62),
+        Offset(w * x, h * 0.68),
+        rope,
       );
     }
 
-    // Propeller indicator (right side)
-    final propX = w * 0.92;
+    // Propeller
+    final propX = w * 0.94;
     final propY = h * 0.4;
-    final propPaint = Paint()
-      ..color = engineOn ? Colors.white.withValues(alpha: 0.5) : Colors.grey
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-    canvas.drawCircle(Offset(propX, propY), h * 0.08, propPaint);
+    canvas.drawCircle(
+      Offset(propX, propY),
+      h * 0.07,
+      Paint()
+        ..color = engineOn ? TTR.brass : TTR.aged
+        ..strokeWidth = 1.5
+        ..style = PaintingStyle.stroke,
+    );
+    if (engineOn) {
+      canvas.drawLine(
+        Offset(propX - h * 0.07, propY),
+        Offset(propX + h * 0.07, propY),
+        Paint()
+          ..color = TTR.brass
+          ..strokeWidth = 1.2,
+      );
+    }
+  }
+
+  void _drawStar(
+      Canvas canvas, Offset c, double r, Color fill, Color stroke) {
+    final path = Path();
+    for (int i = 0; i < 10; i++) {
+      final a = -pi / 2 + i * pi / 5;
+      final rr = i.isEven ? r : r * 0.45;
+      final pt = Offset(c.dx + cos(a) * rr, c.dy + sin(a) * rr);
+      if (i == 0) {
+        path.moveTo(pt.dx, pt.dy);
+      } else {
+        path.lineTo(pt.dx, pt.dy);
+      }
+    }
+    path.close();
+    canvas.drawPath(path, Paint()..color = fill);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = stroke
+        ..strokeWidth = 0.8
+        ..style = PaintingStyle.stroke,
+    );
   }
 
   @override
@@ -321,81 +580,100 @@ class _ZeppelinPainter extends CustomPainter {
       old.engineOn != engineOn || old.throttle != throttle;
 }
 
-// ─── Airplane ────────────────────────────────────────────────────────────────
+// ─── Biplane ────────────────────────────────────────────────────────────────
 
-class _Airplane extends StatelessWidget {
-  const _Airplane();
-
+class _Biplane extends StatelessWidget {
+  const _Biplane();
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 60,
-      height: 30,
-      child: CustomPaint(painter: _AirplanePainter()),
+      width: 64,
+      height: 40,
+      child: CustomPaint(painter: _BiplanePainter()),
     );
   }
 }
 
-class _AirplanePainter extends CustomPainter {
+class _BiplanePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
-    final body = Paint()..color = const Color(0xFFE6E6E6);
-    final shadow = Paint()..color = const Color(0xFF9AA0A6);
+    final outline = Paint()
+      ..color = TTR.ink
+      ..strokeWidth = 0.8
+      ..style = PaintingStyle.stroke;
 
-    // Fuselage
+    // Fuselage (TTR red)
     final fuselage = Path()
       ..moveTo(w * 0.95, h * 0.5)
-      ..lineTo(w * 0.15, h * 0.35)
-      ..lineTo(w * 0.0, h * 0.45)
-      ..lineTo(w * 0.0, h * 0.55)
-      ..lineTo(w * 0.15, h * 0.65)
+      ..lineTo(w * 0.2, h * 0.4)
+      ..lineTo(w * 0.0, h * 0.5)
+      ..lineTo(w * 0.2, h * 0.6)
       ..close();
-    canvas.drawPath(fuselage, body);
+    canvas.drawPath(fuselage, Paint()..color = TTR.red);
+    canvas.drawPath(fuselage, outline);
 
-    // Wings
-    final wings = Path()
-      ..moveTo(w * 0.55, h * 0.5)
-      ..lineTo(w * 0.35, h * 0.05)
-      ..lineTo(w * 0.5, h * 0.5)
-      ..lineTo(w * 0.35, h * 0.95)
-      ..close();
-    canvas.drawPath(wings, shadow);
+    // Upper wing
+    final upperWing = Rect.fromLTWH(w * 0.3, h * 0.18, w * 0.45, h * 0.1);
+    canvas.drawRect(upperWing, Paint()..color = TTR.wood);
+    canvas.drawRect(upperWing, outline);
+    // Lower wing
+    final lowerWing = Rect.fromLTWH(w * 0.3, h * 0.62, w * 0.45, h * 0.1);
+    canvas.drawRect(lowerWing, Paint()..color = TTR.wood);
+    canvas.drawRect(lowerWing, outline);
+
+    // Struts
+    final strut = Paint()
+      ..color = TTR.ink
+      ..strokeWidth = 0.8;
+    canvas.drawLine(Offset(w * 0.4, h * 0.28), Offset(w * 0.4, h * 0.62), strut);
+    canvas.drawLine(
+        Offset(w * 0.65, h * 0.28), Offset(w * 0.65, h * 0.62), strut);
 
     // Tail fin
     final tail = Path()
-      ..moveTo(w * 0.1, h * 0.5)
-      ..lineTo(w * 0.0, h * 0.15)
-      ..lineTo(w * 0.12, h * 0.5)
+      ..moveTo(w * 0.15, h * 0.5)
+      ..lineTo(w * 0.0, h * 0.2)
+      ..lineTo(w * 0.18, h * 0.5)
       ..close();
-    canvas.drawPath(tail, shadow);
+    canvas.drawPath(tail, Paint()..color = TTR.wood);
+    canvas.drawPath(tail, outline);
 
-    // Cockpit window
-    canvas.drawCircle(
-      Offset(w * 0.82, h * 0.45),
-      h * 0.1,
-      Paint()..color = const Color(0xFF4FC3F7),
+    // Propeller
+    canvas.drawLine(
+      Offset(w * 0.95, h * 0.3),
+      Offset(w * 0.95, h * 0.7),
+      Paint()
+        ..color = TTR.ink
+        ..strokeWidth = 1.5,
     );
+
+    // Cockpit
+    canvas.drawCircle(
+      Offset(w * 0.6, h * 0.42),
+      h * 0.08,
+      Paint()..color = TTR.navy,
+    );
+    canvas.drawCircle(Offset(w * 0.6, h * 0.42), h * 0.08, outline);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter old) => false;
 }
 
-// ─── Cloud ───────────────────────────────────────────────────────────────────
+// ─── Cloud ──────────────────────────────────────────────────────────────────
 
 class _Cloud extends StatelessWidget {
   final double scale;
   const _Cloud({required this.scale});
-
   @override
   Widget build(BuildContext context) {
     return Transform.scale(
       scale: scale,
       child: SizedBox(
-        width: 80,
-        height: 36,
+        width: 92,
+        height: 40,
         child: CustomPaint(painter: _CloudPainter()),
       ),
     );
@@ -405,13 +683,20 @@ class _Cloud extends StatelessWidget {
 class _CloudPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white;
-    canvas.drawCircle(Offset(size.width * 0.25, size.height * 0.6), 14, paint);
-    canvas.drawCircle(Offset(size.width * 0.5, size.height * 0.45), 18, paint);
-    canvas.drawCircle(Offset(size.width * 0.75, size.height * 0.6), 14, paint);
-    canvas.drawRect(
-      Rect.fromLTWH(size.width * 0.25, size.height * 0.6, size.width * 0.5, 8),
-      paint,
+    final w = size.width;
+    final h = size.height;
+    final path = Path()
+      ..addOval(Rect.fromCircle(center: Offset(w * 0.25, h * 0.55), radius: 14))
+      ..addOval(Rect.fromCircle(center: Offset(w * 0.5, h * 0.4), radius: 18))
+      ..addOval(Rect.fromCircle(center: Offset(w * 0.78, h * 0.55), radius: 14))
+      ..addRect(Rect.fromLTWH(w * 0.25, h * 0.55, w * 0.55, 8));
+    canvas.drawPath(path, Paint()..color = TTR.cream);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = TTR.inkLight.withValues(alpha: 0.7)
+        ..strokeWidth = 1
+        ..style = PaintingStyle.stroke,
     );
   }
 
@@ -419,12 +704,10 @@ class _CloudPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter old) => false;
 }
 
-// ─── HUD ─────────────────────────────────────────────────────────────────────
+// ─── Vintage HUD (passport ticket) ──────────────────────────────────────────
 
 class _Hud extends StatelessWidget {
-  final double altitude;
-  final double throttle;
-  final double heading;
+  final double altitude, throttle, heading;
   final bool engineOn;
   final int planes;
 
@@ -441,51 +724,104 @@ class _Hud extends StatelessWidget {
     final altMeters = (altitude * 2400).round();
     final speed = (throttle * 120).round();
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFB8860B), width: 1),
+        color: TTR.cream,
+        border: Border.all(color: TTR.ink, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: TTR.ink.withValues(alpha: 0.35),
+            blurRadius: 6,
+            offset: const Offset(2, 3),
+          ),
+        ],
       ),
       child: DefaultTextStyle(
         style: const TextStyle(
-          color: Color(0xFFFFE680),
-          fontFamily: 'monospace',
-          fontSize: 12,
-          height: 1.5,
+          color: TTR.ink,
+          fontFamily: 'Georgia',
+          fontSize: 11,
+          height: 1.6,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('◈ ZEPPELIN HMS-1 ◈',
-                style: TextStyle(
+            Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: engineOn ? TTR.green : TTR.red,
+                border: Border.all(color: TTR.ink, width: 1),
+              ),
+              child: Text(
+                engineOn ? 'IN  FLIGHT' : 'GROUNDED',
+                style: const TextStyle(
+                  color: TTR.cream,
+                  fontFamily: 'Georgia',
                   fontWeight: FontWeight.bold,
-                  color: engineOn
-                      ? const Color(0xFFFFE680)
-                      : Colors.redAccent,
-                )),
-            Text('ALT: ${altMeters.toString().padLeft(4)} m'),
-            Text('SPD: ${speed.toString().padLeft(3)} km/h'),
-            Text('HDG: ${(heading * 45).toStringAsFixed(0).padLeft(3)}°'),
-            Text('TRAFFIC: $planes ✈'),
-            Text('ENG: ${engineOn ? "ON " : "OFF"}'),
+                  fontSize: 10,
+                  letterSpacing: 2,
+                ),
+              ),
+            ),
+            const _HudRow(label: 'AIRSHIP', value: 'HMS-I'),
+            _HudRow(label: 'ALTITUDE', value: '${_pad(altMeters, 4)} m'),
+            _HudRow(label: 'SPEED', value: '${_pad(speed, 3)} km/h'),
+            _HudRow(
+                label: 'BEARING',
+                value: '${(heading * 45).toStringAsFixed(0).padLeft(3)}°'),
+            _HudRow(label: 'TRAFFIC', value: '$planes ✈'),
           ],
         ),
       ),
     );
   }
+
+  String _pad(int n, int w) => n.toString().padLeft(w);
 }
 
-// ─── Control panel ───────────────────────────────────────────────────────────
+class _HudRow extends StatelessWidget {
+  final String label, value;
+  const _HudRow({required this.label, required this.value});
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 76,
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: TTR.inkLight,
+              fontFamily: 'Georgia',
+              fontSize: 10,
+              fontStyle: FontStyle.italic,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: TTR.ink,
+            fontFamily: 'Georgia',
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Wooden control panel ───────────────────────────────────────────────────
 
 class _ControlPanel extends StatelessWidget {
-  final double altitude;
-  final double throttle;
-  final double heading;
+  final double altitude, throttle, heading;
   final bool engineOn;
-  final ValueChanged<double> onAltitude;
-  final ValueChanged<double> onThrottle;
-  final ValueChanged<double> onHeading;
+  final ValueChanged<double> onAltitude, onThrottle, onHeading;
   final ValueChanged<bool> onEngine;
 
   const _ControlPanel({
@@ -502,66 +838,115 @@ class _ControlPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF2A2418), Color(0xFF1A1610)],
+      margin: const EdgeInsets.fromLTRB(10, 4, 10, 10),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [TTR.woodLight, TTR.wood],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
-        border: Border(top: BorderSide(color: Color(0xFFB8860B), width: 2)),
+        border: Border.all(color: TTR.ink, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: TTR.ink.withValues(alpha: 0.4),
+            blurRadius: 6,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'CONTROL PANEL',
-                style: TextStyle(
-                  color: Color(0xFFFFE680),
-                  letterSpacing: 2,
-                  fontWeight: FontWeight.bold,
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [TTR.brassLight, TTR.brass],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              border: Border.all(color: TTR.ink, width: 1.5),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.star, size: 14, color: TTR.ink),
+                      SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'B R I D G E   C O N T R O L S',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: TTR.ink,
+                            fontFamily: 'Georgia',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Icon(Icons.star, size: 14, color: TTR.ink),
+                    ],
+                  ),
                 ),
-              ),
-              Row(
-                children: [
-                  Text(
-                    engineOn ? 'ENGINE ON' : 'ENGINE OFF',
-                    style: TextStyle(
-                      color: engineOn
-                          ? const Color(0xFF7CFFA0)
-                          : Colors.redAccent,
-                      fontWeight: FontWeight.bold,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      engineOn ? 'ENGINE  RUNNING' : 'ENGINE  IDLE',
+                      style: TextStyle(
+                        color: engineOn ? TTR.green : TTR.red,
+                        fontFamily: 'Georgia',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                        letterSpacing: 1.5,
+                      ),
                     ),
-                  ),
-                  Switch(
-                    value: engineOn,
-                    onChanged: onEngine,
-                    activeThumbColor: const Color(0xFFB8860B),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 6),
+                    Transform.scale(
+                      scale: 0.85,
+                      child: Switch(
+                        value: engineOn,
+                        onChanged: onEngine,
+                        activeThumbColor: TTR.green,
+                        activeTrackColor: TTR.parchment,
+                        inactiveThumbColor: TTR.red,
+                        inactiveTrackColor: TTR.parchment,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          _Slider(
+          _BrassSlider(
             label: 'ALTITUDE',
             value: altitude,
             onChanged: onAltitude,
-            color: const Color(0xFF7CC4FF),
+            accent: TTR.navy,
+            valueLabel: '${(altitude * 2400).round()} m',
           ),
-          _Slider(
+          _BrassSlider(
             label: 'THROTTLE',
             value: throttle,
             onChanged: engineOn ? onThrottle : null,
-            color: const Color(0xFFFFB347),
+            accent: TTR.red,
+            valueLabel: '${(throttle * 120).round()} km/h',
           ),
-          _Slider(
-            label: 'HEADING ',
+          _BrassSlider(
+            label: 'BEARING',
             value: (heading + 1) / 2,
             onChanged: (v) => onHeading(v * 2 - 1),
-            color: const Color(0xFFC589E8),
+            accent: TTR.green,
+            valueLabel: '${(heading * 45).toStringAsFixed(0)}°',
           ),
         ],
       ),
@@ -569,62 +954,90 @@ class _ControlPanel extends StatelessWidget {
   }
 }
 
-class _Slider extends StatelessWidget {
+class _BrassSlider extends StatelessWidget {
   final String label;
   final double value;
   final ValueChanged<double>? onChanged;
-  final Color color;
+  final Color accent;
+  final String valueLabel;
 
-  const _Slider({
+  const _BrassSlider({
     required this.label,
     required this.value,
     required this.onChanged,
-    required this.color,
+    required this.accent,
+    required this.valueLabel,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 80,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFFD9D2B6),
-              fontFamily: 'monospace',
-              fontSize: 12,
-              letterSpacing: 1.2,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Container(
+            width: 96,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [TTR.brassLight, TTR.brass],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              border: Border.all(color: TTR.ink, width: 1),
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: TTR.ink,
+                fontFamily: 'Georgia',
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+                letterSpacing: 1.5,
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: color,
-              thumbColor: color,
-              inactiveTrackColor: color.withValues(alpha: 0.2),
-              overlayColor: color.withValues(alpha: 0.2),
-            ),
-            child: Slider(
-              value: value.clamp(0.0, 1.0),
-              onChanged: onChanged,
-            ),
-          ),
-        ),
-        SizedBox(
-          width: 40,
-          child: Text(
-            '${(value * 100).round()}%',
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              color: Color(0xFFD9D2B6),
-              fontFamily: 'monospace',
-              fontSize: 12,
+          const SizedBox(width: 8),
+          Expanded(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 6,
+                activeTrackColor: accent,
+                thumbColor: TTR.brassLight,
+                inactiveTrackColor: TTR.parchment.withValues(alpha: 0.6),
+                overlayColor: accent.withValues(alpha: 0.2),
+                thumbShape: const RoundSliderThumbShape(
+                  enabledThumbRadius: 9,
+                  disabledThumbRadius: 6,
+                ),
+              ),
+              child: Slider(
+                value: value.clamp(0.0, 1.0),
+                onChanged: onChanged,
+              ),
             ),
           ),
-        ),
-      ],
+          Container(
+            width: 80,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            decoration: BoxDecoration(
+              color: TTR.cream,
+              border: Border.all(color: TTR.ink, width: 1),
+            ),
+            child: Text(
+              valueLabel,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: TTR.ink,
+                fontFamily: 'Georgia',
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
