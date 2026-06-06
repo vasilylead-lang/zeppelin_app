@@ -113,8 +113,10 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
       // Brisk drift — these are right in front of you
       speed: 0.0012 + _rng.nextDouble() * 0.0024,
       goingRight: goingRight,
-      // Big, prominent — not background specks
-      scale: 0.95 + _rng.nextDouble() * 0.45,
+      // Scaled to read in proportion to the zeppelin's gondola/windows —
+      // the plane should look like a real aircraft next to the airship,
+      // not as big as it.
+      scale: 0.55 + _rng.nextDouble() * 0.25,
     );
   }
 
