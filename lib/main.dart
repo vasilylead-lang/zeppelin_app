@@ -331,6 +331,11 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
                               child: _CompassRose(),
                             ),
                             const Positioned(
+                              left: 14,
+                              top: 14,
+                              child: _Logo(size: 64),
+                            ),
+                            const Positioned(
                               top: 12,
                               left: 0,
                               right: 0,
@@ -676,6 +681,226 @@ class _PaperGrainPainter extends CustomPainter {
       final y = rng.nextDouble() * size.height;
       canvas.drawCircle(Offset(x, y), rng.nextDouble() * 1.2, paint);
     }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
+}
+
+// ─── Logo medallion ─────────────────────────────────────────────────────────
+
+class _Logo extends StatelessWidget {
+  final double size;
+  const _Logo({this.size = 80});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(painter: _LogoPainter()),
+    );
+  }
+}
+
+class _LogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = Offset(size.width / 2, size.height / 2);
+    final r = size.width / 2 - 1;
+
+    // ── Outer red ring with thick ink border ──
+    canvas.drawCircle(c, r, Paint()..color = TTR.red);
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..color = TTR.ink
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke,
+    );
+
+    // ── Cream inner disc with ink hairline + brass accent ──
+    final innerR = r - size.width * 0.10;
+    canvas.drawCircle(c, innerR, Paint()..color = TTR.cream);
+    canvas.drawCircle(
+      c,
+      innerR,
+      Paint()
+        ..color = TTR.ink
+        ..strokeWidth = 0.8
+        ..style = PaintingStyle.stroke,
+    );
+    canvas.drawCircle(
+      c,
+      innerR - 2.5,
+      Paint()
+        ..color = TTR.brass
+        ..strokeWidth = 0.8
+        ..style = PaintingStyle.stroke,
+    );
+
+    // ── Paper grain inside ──
+    final rng = Random(7);
+    for (int i = 0; i < 22; i++) {
+      final ang = rng.nextDouble() * 2 * pi;
+      final rad = rng.nextDouble() * (innerR - 4);
+      canvas.drawCircle(
+        Offset(c.dx + cos(ang) * rad, c.dy + sin(ang) * rad),
+        rng.nextDouble() * 0.7,
+        Paint()..color = TTR.inkLight.withValues(alpha: 0.10),
+      );
+    }
+
+    // ── Stars on the red ring (decorative) ──
+    for (int i = 0; i < 6; i++) {
+      final a = -pi / 2 + i * pi / 3;
+      final pos = Offset(
+        c.dx + cos(a) * (r - size.width * 0.05),
+        c.dy + sin(a) * (r - size.width * 0.05),
+      );
+      _drawStar(canvas, pos, size.width * 0.035, TTR.cream);
+    }
+
+    // ── Zeppelin silhouette (right-facing, dominates center) ──
+    final zCenter = Offset(c.dx + 1, c.dy + size.height * 0.05);
+    final zW = size.width * 0.50;
+    final zH = size.height * 0.20;
+
+    // Tail fin (drawn first, behind envelope)
+    final finBaseX = zCenter.dx - zW / 2 + 2;
+    final fin = Path()
+      ..moveTo(finBaseX, zCenter.dy - zH * 0.15)
+      ..lineTo(finBaseX - size.width * 0.06, zCenter.dy - zH * 0.65)
+      ..lineTo(finBaseX - size.width * 0.06, zCenter.dy + zH * 0.65)
+      ..close();
+    canvas.drawPath(fin, Paint()..color = TTR.wood);
+    canvas.drawPath(
+      fin,
+      Paint()
+        ..color = TTR.ink
+        ..strokeWidth = 0.7
+        ..style = PaintingStyle.stroke,
+    );
+
+    // Envelope (cream → tan gradient)
+    final envelopeRect =
+        Rect.fromCenter(center: zCenter, width: zW, height: zH);
+    final envelope =
+        RRect.fromRectAndRadius(envelopeRect, Radius.circular(zH / 2));
+    canvas.drawRRect(
+      envelope,
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0xFFF4E8C9), Color(0xFFB89968)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(envelopeRect),
+    );
+    canvas.drawRRect(
+      envelope,
+      Paint()
+        ..color = TTR.ink
+        ..strokeWidth = 0.9
+        ..style = PaintingStyle.stroke,
+    );
+
+    // Red stripe with brass under-stripe
+    canvas.drawRect(
+      Rect.fromCenter(
+        center: zCenter,
+        width: zW - 6,
+        height: zH * 0.18,
+      ),
+      Paint()..color = TTR.red,
+    );
+    canvas.drawRect(
+      Rect.fromCenter(
+        center: Offset(zCenter.dx, zCenter.dy + zH * 0.20),
+        width: zW - 6,
+        height: zH * 0.06,
+      ),
+      Paint()..color = TTR.brass,
+    );
+
+    // Gondola
+    final gondolaRect = Rect.fromCenter(
+      center: Offset(zCenter.dx, zCenter.dy + zH * 0.65),
+      width: zW * 0.42,
+      height: zH * 0.36,
+    );
+    final gondola =
+        RRect.fromRectAndRadius(gondolaRect, const Radius.circular(2));
+    canvas.drawRRect(gondola, Paint()..color = TTR.wood);
+    canvas.drawRRect(
+      gondola,
+      Paint()
+        ..color = TTR.ink
+        ..strokeWidth = 0.7
+        ..style = PaintingStyle.stroke,
+    );
+
+    // ── Tiny aircraft (much smaller, above-right of the zeppelin) ──
+    final pC = Offset(
+      c.dx + size.width * 0.22,
+      c.dy - size.height * 0.22,
+    );
+    final pW = size.width * 0.16;
+
+    final planeInk = Paint()
+      ..color = TTR.ink
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round;
+    // Fuselage (horizontal cigar, simplified)
+    canvas.drawLine(
+      Offset(pC.dx - pW * 0.45, pC.dy),
+      Offset(pC.dx + pW * 0.5, pC.dy),
+      planeInk,
+    );
+    // Wing (perpendicular)
+    canvas.drawLine(
+      Offset(pC.dx - pW * 0.1, pC.dy - pW * 0.28),
+      Offset(pC.dx - pW * 0.1, pC.dy + pW * 0.28),
+      planeInk,
+    );
+    // Tail (small vertical at rear)
+    canvas.drawLine(
+      Offset(pC.dx - pW * 0.4, pC.dy - pW * 0.18),
+      Offset(pC.dx - pW * 0.4, pC.dy + pW * 0.05),
+      Paint()
+        ..color = TTR.ink
+        ..strokeWidth = 1
+        ..strokeCap = StrokeCap.round,
+    );
+    // Propeller hub dot
+    canvas.drawCircle(
+      Offset(pC.dx + pW * 0.5, pC.dy),
+      1.2,
+      Paint()..color = TTR.brass,
+    );
+  }
+
+  void _drawStar(Canvas canvas, Offset c, double r, Color fill) {
+    final path = Path();
+    for (int i = 0; i < 10; i++) {
+      final a = -pi / 2 + i * pi / 5;
+      final rr = i.isEven ? r : r * 0.42;
+      final pt = Offset(c.dx + cos(a) * rr, c.dy + sin(a) * rr);
+      if (i == 0) {
+        path.moveTo(pt.dx, pt.dy);
+      } else {
+        path.lineTo(pt.dx, pt.dy);
+      }
+    }
+    path.close();
+    canvas.drawPath(path, Paint()..color = fill);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = TTR.ink
+        ..strokeWidth = 0.4
+        ..style = PaintingStyle.stroke,
+    );
   }
 
   @override
