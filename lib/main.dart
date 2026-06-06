@@ -82,8 +82,8 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
   // Constants used both for rendering and collision math.
   static const double _zeppelinW = 180;
   static const double _zeppelinH = 100;
-  static const double _planeW = 52;
-  static const double _planeH = 34;
+  static const double _planeW = 64;
+  static const double _planeH = 40;
 
   late final AnimationController _ticker;
   late final AnimationController _zeppelinBob;
@@ -944,16 +944,17 @@ class _Aircraft extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 52,
-      height: 34,
+      width: 64,
+      height: 40,
       child: CustomPaint(painter: _AircraftPainter()),
     );
   }
 }
 
 class _AircraftPainter extends CustomPainter {
-  // Right-facing 1941 Stinson Vultee L-1E Vigilant —
-  // high-wing single-engine observation aircraft, olive-drab military livery.
+  // 1941 Stinson Vultee L-1E Vigilant — head-on (approaching) view.
+  // Long wingspan with dihedral lift, fuselage with greenhouse canopy,
+  // landing-gear V down to teardrop spats, propeller blur in front.
   static const olive = Color(0xFF5B6B3F);
   static const oliveLight = Color(0xFF7A8B5C);
   static const oliveDark = Color(0xFF3F4A2A);
@@ -963,237 +964,162 @@ class _AircraftPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
-
     final outline = Paint()
       ..color = TTR.ink
       ..strokeWidth = 0.9
       ..style = PaintingStyle.stroke;
-    final strut = Paint()
-      ..color = TTR.ink
-      ..strokeWidth = 0.9;
 
-    // ── Vertical tail fin (rear, drawn before fuselage) ──
+    // ── Vertical tail fin (peeks up behind the fuselage centerline) ──
     final tailFin = Path()
-      ..moveTo(w * 0.05, h * 0.42)
-      ..quadraticBezierTo(w * 0.05, h * 0.10, w * 0.13, h * 0.08)
-      ..quadraticBezierTo(w * 0.20, h * 0.18, w * 0.20, h * 0.42)
+      ..moveTo(w * 0.475, h * 0.36)
+      ..lineTo(w * 0.49, h * 0.10)
+      ..lineTo(w * 0.51, h * 0.10)
+      ..lineTo(w * 0.525, h * 0.36)
       ..close();
     canvas.drawPath(tailFin, Paint()..color = olive);
     canvas.drawPath(tailFin, outline);
 
-    // ── Horizontal stabilizer ──
+    // ── Horizontal stabilizer (small horizontal bar behind wing) ──
     final hStab = Path()
-      ..moveTo(w * 0.02, h * 0.50)
-      ..lineTo(w * 0.22, h * 0.46)
-      ..lineTo(w * 0.22, h * 0.54)
-      ..lineTo(w * 0.02, h * 0.52)
+      ..moveTo(w * 0.34, h * 0.32)
+      ..lineTo(w * 0.66, h * 0.32)
+      ..lineTo(w * 0.62, h * 0.38)
+      ..lineTo(w * 0.38, h * 0.38)
       ..close();
     canvas.drawPath(hStab, Paint()..color = oliveLight);
     canvas.drawPath(hStab, outline);
 
-    // ── Tailwheel ──
+    // ── Main wing (long span with slight dihedral V upward to tips) ──
+    final wing = Path()
+      ..moveTo(w * 0.02, h * 0.40)        // L tip leading
+      ..lineTo(w * 0.44, h * 0.46)        // L wing root top
+      ..lineTo(w * 0.56, h * 0.46)        // R wing root top
+      ..lineTo(w * 0.98, h * 0.40)        // R tip leading
+      ..lineTo(w * 0.96, h * 0.50)        // R tip trailing
+      ..lineTo(w * 0.56, h * 0.54)        // R wing root bottom
+      ..lineTo(w * 0.44, h * 0.54)        // L wing root bottom
+      ..lineTo(w * 0.04, h * 0.50)        // L tip trailing
+      ..close();
+    canvas.drawPath(wing, Paint()..color = oliveLight);
+    canvas.drawPath(wing, outline);
+    // Darker leading-edge highlight
     canvas.drawLine(
-      Offset(w * 0.10, h * 0.60),
-      Offset(w * 0.10, h * 0.68),
-      strut,
+      Offset(w * 0.02, h * 0.40),
+      Offset(w * 0.44, h * 0.46),
+      Paint()
+        ..color = oliveDark
+        ..strokeWidth = 0.7,
     );
-    canvas.drawCircle(
-      Offset(w * 0.10, h * 0.70),
-      h * 0.025,
-      Paint()..color = TTR.ink,
+    canvas.drawLine(
+      Offset(w * 0.56, h * 0.46),
+      Offset(w * 0.98, h * 0.40),
+      Paint()
+        ..color = oliveDark
+        ..strokeWidth = 0.7,
     );
 
-    // ── Main landing gear: V-strut + streamlined wheel spat ──
-    canvas.drawLine(
-      Offset(w * 0.42, h * 0.60),
-      Offset(w * 0.44, h * 0.78),
-      Paint()
-        ..color = TTR.ink
-        ..strokeWidth = 1.2,
+    // ── US star roundel on each wing underside ──
+    final leftStar = Offset(w * 0.22, h * 0.48);
+    canvas.drawCircle(leftStar, h * 0.05, Paint()..color = TTR.navy);
+    canvas.drawCircle(leftStar, h * 0.05, outline);
+    _drawWhiteStar(canvas, leftStar, h * 0.032);
+    final rightStar = Offset(w * 0.78, h * 0.48);
+    canvas.drawCircle(rightStar, h * 0.05, Paint()..color = TTR.navy);
+    canvas.drawCircle(rightStar, h * 0.05, outline);
+    _drawWhiteStar(canvas, rightStar, h * 0.032);
+
+    // ── Propeller disc blur (translucent grey, in front of cowl) ──
+    canvas.drawCircle(
+      Offset(w * 0.50, h * 0.42),
+      h * 0.26,
+      Paint()..color = TTR.ink.withValues(alpha: 0.13),
     );
-    canvas.drawLine(
-      Offset(w * 0.52, h * 0.60),
-      Offset(w * 0.46, h * 0.78),
+    canvas.drawCircle(
+      Offset(w * 0.50, h * 0.42),
+      h * 0.26,
       Paint()
-        ..color = TTR.ink
-        ..strokeWidth = 1.2,
-    );
-    // Teardrop spat (wheel fairing)
-    final spat = Path()
-      ..moveTo(w * 0.38, h * 0.78)
-      ..quadraticBezierTo(w * 0.36, h * 0.92, w * 0.45, h * 0.94)
-      ..quadraticBezierTo(w * 0.54, h * 0.92, w * 0.54, h * 0.80)
-      ..quadraticBezierTo(w * 0.50, h * 0.74, w * 0.42, h * 0.76)
-      ..quadraticBezierTo(w * 0.39, h * 0.77, w * 0.38, h * 0.78)
-      ..close();
-    canvas.drawPath(spat, Paint()..color = olive);
-    canvas.drawPath(spat, outline);
-    // Wheel rim hint at bottom of spat
-    canvas.drawArc(
-      Rect.fromCenter(
-        center: Offset(w * 0.45, h * 0.92),
-        width: w * 0.14,
-        height: h * 0.08,
-      ),
-      0,
-      pi,
-      false,
-      Paint()
-        ..color = TTR.ink
-        ..strokeWidth = 1.2
+        ..color = TTR.ink.withValues(alpha: 0.45)
+        ..strokeWidth = 0.5
         ..style = PaintingStyle.stroke,
     );
 
-    // ── Fuselage (long body with slight curves) ──
-    final fuselage = Path()
-      ..moveTo(w * 0.04, h * 0.50)
-      ..quadraticBezierTo(w * 0.04, h * 0.42, w * 0.18, h * 0.42)
-      ..lineTo(w * 0.74, h * 0.40)
-      ..quadraticBezierTo(w * 0.84, h * 0.42, w * 0.88, h * 0.46)
-      ..quadraticBezierTo(w * 0.91, h * 0.50, w * 0.88, h * 0.54)
-      ..quadraticBezierTo(w * 0.84, h * 0.58, w * 0.74, h * 0.60)
-      ..lineTo(w * 0.18, h * 0.60)
-      ..quadraticBezierTo(w * 0.04, h * 0.58, w * 0.04, h * 0.50)
-      ..close();
-    canvas.drawPath(fuselage, Paint()..color = olive);
-    canvas.drawPath(fuselage, outline);
+    // ── Fuselage (vertical cigar centered) ──
+    final fuselage = Rect.fromCenter(
+      center: Offset(w * 0.50, h * 0.50),
+      width: w * 0.16,
+      height: h * 0.36,
+    );
+    canvas.drawOval(fuselage, Paint()..color = olive);
+    canvas.drawOval(fuselage, outline);
 
-    // Light belly highlight
+    // ── Greenhouse canopy on top-front of fuselage ──
+    final canopy = Rect.fromCenter(
+      center: Offset(w * 0.50, h * 0.46),
+      width: w * 0.10,
+      height: h * 0.12,
+    );
+    canvas.drawOval(canopy, Paint()..color = canopyGlass);
+    canvas.drawOval(canopy, outline);
+    // Center frame line on canopy
     canvas.drawLine(
-      Offset(w * 0.18, h * 0.58),
-      Offset(w * 0.74, h * 0.58),
+      Offset(w * 0.50, h * 0.40),
+      Offset(w * 0.50, h * 0.52),
       Paint()
-        ..color = oliveLight
+        ..color = TTR.ink
         ..strokeWidth = 0.6,
     );
 
-    // ── Greenhouse canopy (multi-pane) on top of fuselage ──
-    final canopy = Path()
-      ..moveTo(w * 0.30, h * 0.42)
-      ..quadraticBezierTo(w * 0.30, h * 0.30, w * 0.40, h * 0.28)
-      ..lineTo(w * 0.66, h * 0.28)
-      ..quadraticBezierTo(w * 0.74, h * 0.30, w * 0.74, h * 0.42)
-      ..close();
-    canvas.drawPath(canopy, Paint()..color = canopyGlass);
-    canvas.drawPath(canopy, outline);
-    // Window frames (subtle vertical bars)
-    final frame = Paint()
-      ..color = TTR.ink
-      ..strokeWidth = 0.7;
-    for (final f in [0.36, 0.44, 0.52, 0.60, 0.68]) {
-      // Compute upper y based on canopy slope
-      final upperY = (f < 0.40)
-          ? h * (0.42 - (f - 0.30) / 0.10 * 0.12)
-          : (f > 0.66)
-              ? h * (0.28 + (f - 0.66) / 0.08 * 0.14)
-              : h * 0.28;
-      canvas.drawLine(
-        Offset(w * f, h * 0.42),
-        Offset(w * f, upperY),
-        frame,
-      );
-    }
-
-    // ── High wing (mounted above fuselage/canopy) ──
-    final wingRect =
-        Rect.fromLTWH(w * 0.16, h * 0.20, w * 0.62, h * 0.08);
-    canvas.drawRect(wingRect, Paint()..color = oliveLight);
-    canvas.drawRect(wingRect, outline);
-    // Wing leading-edge highlight
-    canvas.drawLine(
-      Offset(w * 0.16, h * 0.22),
-      Offset(w * 0.78, h * 0.22),
-      Paint()
-        ..color = oliveDark
-        ..strokeWidth = 0.8,
-    );
-
-    // ── Wing struts (V-shape from wing underside to lower fuselage) ──
-    canvas.drawLine(
-      Offset(w * 0.30, h * 0.28),
-      Offset(w * 0.24, h * 0.42),
-      strut,
-    );
-    canvas.drawLine(
-      Offset(w * 0.30, h * 0.28),
-      Offset(w * 0.34, h * 0.42),
-      strut,
-    );
-    canvas.drawLine(
-      Offset(w * 0.64, h * 0.28),
-      Offset(w * 0.58, h * 0.42),
-      strut,
-    );
-    canvas.drawLine(
-      Offset(w * 0.64, h * 0.28),
-      Offset(w * 0.68, h * 0.42),
-      strut,
-    );
-
-    // ── US star insignia on fuselage side ──
-    final fuseStar = Offset(w * 0.24, h * 0.51);
+    // ── Engine cowl (round dark disc, front of fuselage) ──
     canvas.drawCircle(
-      fuseStar,
-      h * 0.06,
-      Paint()..color = TTR.navy,
+      Offset(w * 0.50, h * 0.42),
+      h * 0.09,
+      Paint()..color = oliveDark,
     );
-    canvas.drawCircle(fuseStar, h * 0.06, outline);
-    _drawWhiteStar(canvas, fuseStar, h * 0.038);
-
-    // ── Star insignia on top of wing ──
-    final wingStar = Offset(w * 0.36, h * 0.24);
+    canvas.drawCircle(Offset(w * 0.50, h * 0.42), h * 0.09, outline);
+    // Brass propeller hub
     canvas.drawCircle(
-      wingStar,
-      h * 0.028,
-      Paint()..color = TTR.navy,
-    );
-    _drawWhiteStar(canvas, wingStar, h * 0.018);
-
-    // ── Engine cowl (radial-engine hint at the nose) ──
-    final cowlRect = Rect.fromCenter(
-      center: Offset(w * 0.91, h * 0.50),
-      width: w * 0.10,
-      height: h * 0.22,
-    );
-    canvas.drawOval(cowlRect, Paint()..color = oliveDark);
-    canvas.drawOval(cowlRect, outline);
-    // Cylinder hints (small darker arcs)
-    final cyl = Paint()
-      ..color = TTR.ink
-      ..strokeWidth = 0.7;
-    canvas.drawLine(
-      Offset(w * 0.90, h * 0.42),
-      Offset(w * 0.93, h * 0.42),
-      cyl,
-    );
-    canvas.drawLine(
-      Offset(w * 0.90, h * 0.58),
-      Offset(w * 0.93, h * 0.58),
-      cyl,
-    );
-
-    // ── Propeller (vertical blade + brass hub) ──
-    canvas.drawLine(
-      Offset(w * 0.97, h * 0.18),
-      Offset(w * 0.97, h * 0.82),
-      Paint()
-        ..color = TTR.ink
-        ..strokeWidth = 1.8
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.drawCircle(
-      Offset(w * 0.97, h * 0.50),
-      2,
+      Offset(w * 0.50, h * 0.42),
+      h * 0.025,
       Paint()..color = TTR.brass,
     );
     canvas.drawCircle(
-      Offset(w * 0.97, h * 0.50),
-      2,
+      Offset(w * 0.50, h * 0.42),
+      h * 0.025,
       Paint()
         ..color = TTR.ink
-        ..strokeWidth = 0.6
+        ..strokeWidth = 0.5
         ..style = PaintingStyle.stroke,
     );
+
+    // ── Main landing gear: V-struts down to wheel spats ──
+    final strut = Paint()
+      ..color = TTR.ink
+      ..strokeWidth = 1.1;
+    canvas.drawLine(
+      Offset(w * 0.46, h * 0.62),
+      Offset(w * 0.36, h * 0.78),
+      strut,
+    );
+    canvas.drawLine(
+      Offset(w * 0.54, h * 0.62),
+      Offset(w * 0.64, h * 0.78),
+      strut,
+    );
+    // Teardrop wheel spats (front view: short vertical ovals)
+    final leftSpat = Rect.fromCenter(
+      center: Offset(w * 0.36, h * 0.84),
+      width: w * 0.08,
+      height: h * 0.18,
+    );
+    canvas.drawOval(leftSpat, Paint()..color = olive);
+    canvas.drawOval(leftSpat, outline);
+    final rightSpat = Rect.fromCenter(
+      center: Offset(w * 0.64, h * 0.84),
+      width: w * 0.08,
+      height: h * 0.18,
+    );
+    canvas.drawOval(rightSpat, Paint()..color = olive);
+    canvas.drawOval(rightSpat, outline);
   }
 
   void _drawWhiteStar(Canvas canvas, Offset c, double r) {
