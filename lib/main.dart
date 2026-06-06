@@ -82,8 +82,8 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
   // Constants used both for rendering and collision math.
   static const double _zeppelinW = 180;
   static const double _zeppelinH = 100;
-  static const double _planeW = 80;
-  static const double _planeH = 50;
+  static const double _planeW = 52;
+  static const double _planeH = 34;
 
   late final AnimationController _ticker;
   late final AnimationController _zeppelinBob;
@@ -108,10 +108,13 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
     final goingRight = _rng.nextBool();
     return _Plane(
       x: initial ? _rng.nextDouble() : (goingRight ? -0.15 : 1.15),
-      y: 0.08 + _rng.nextDouble() * 0.55,
-      speed: 0.0008 + _rng.nextDouble() * 0.0018,
+      // Bias higher in the sky — distant planes fly above, not at zeppelin level
+      y: 0.06 + _rng.nextDouble() * 0.40,
+      // Slower drift to read as distant
+      speed: 0.0004 + _rng.nextDouble() * 0.0010,
       goingRight: goingRight,
-      scale: 0.7 + _rng.nextDouble() * 0.6,
+      // Smaller scale range: distant, modest perspective variation
+      scale: 0.45 + _rng.nextDouble() * 0.35,
     );
   }
 
@@ -935,8 +938,8 @@ class _Aircraft extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 80,
-      height: 50,
+      width: 52,
+      height: 34,
       child: CustomPaint(painter: _AircraftPainter()),
     );
   }
