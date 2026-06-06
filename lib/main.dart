@@ -108,13 +108,13 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
     final goingRight = _rng.nextBool();
     return _Plane(
       x: initial ? _rng.nextDouble() : (goingRight ? -0.15 : 1.15),
-      // Bias higher in the sky — distant planes fly above, not at zeppelin level
-      y: 0.06 + _rng.nextDouble() * 0.40,
-      // Slower drift to read as distant
-      speed: 0.0004 + _rng.nextDouble() * 0.0010,
+      // Up in the high sky — distant traffic well above the airship
+      y: 0.04 + _rng.nextDouble() * 0.32,
+      // Much slower — distant motion barely shifts across the frame
+      speed: 0.00018 + _rng.nextDouble() * 0.00045,
       goingRight: goingRight,
-      // Smaller scale range: distant, modest perspective variation
-      scale: 0.45 + _rng.nextDouble() * 0.35,
+      // Much smaller — specks dotting the horizon
+      scale: 0.22 + _rng.nextDouble() * 0.22,
     );
   }
 
@@ -395,14 +395,20 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
   }
 
   Widget _buildPlane(_Plane p, BoxConstraints c) {
+    // Atmospheric perspective: smaller planes fade into the sky haze.
+    // Scale 0.22 → ~0.50 opacity; scale 0.44 → ~0.90 opacity.
+    final haze = (0.50 + (p.scale - 0.22) * 2.0).clamp(0.55, 0.95);
     return Positioned(
       left: p.x * c.maxWidth,
       top: p.y * c.maxHeight,
-      child: Transform.scale(
-        scale: p.scale,
-        child: Transform.flip(
-          flipX: !p.goingRight,
-          child: const _Aircraft(),
+      child: Opacity(
+        opacity: haze,
+        child: Transform.scale(
+          scale: p.scale,
+          child: Transform.flip(
+            flipX: !p.goingRight,
+            child: const _Aircraft(),
+          ),
         ),
       ),
     );
