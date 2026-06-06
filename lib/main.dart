@@ -994,25 +994,25 @@ class _AircraftPainter extends CustomPainter {
     canvas.drawCircle(Offset(w * 0.10, h * 0.70), h * 0.025,
         Paint()..color = TTR.ink);
 
-    // ── Main gear V-strut + teardrop spat ──
-    canvas.drawLine(Offset(w * 0.42, h * 0.60),
-        Offset(w * 0.44, h * 0.78),
+    // ── Main gear V-strut + teardrop spat (forward, under the cowl) ──
+    canvas.drawLine(Offset(w * 0.62, h * 0.60),
+        Offset(w * 0.64, h * 0.78),
         Paint()..color = TTR.ink..strokeWidth = 1.2);
-    canvas.drawLine(Offset(w * 0.52, h * 0.60),
-        Offset(w * 0.46, h * 0.78),
+    canvas.drawLine(Offset(w * 0.72, h * 0.60),
+        Offset(w * 0.66, h * 0.78),
         Paint()..color = TTR.ink..strokeWidth = 1.2);
     final spat = Path()
-      ..moveTo(w * 0.38, h * 0.78)
-      ..quadraticBezierTo(w * 0.36, h * 0.92, w * 0.45, h * 0.94)
-      ..quadraticBezierTo(w * 0.54, h * 0.92, w * 0.54, h * 0.80)
-      ..quadraticBezierTo(w * 0.50, h * 0.74, w * 0.42, h * 0.76)
-      ..quadraticBezierTo(w * 0.39, h * 0.77, w * 0.38, h * 0.78)
+      ..moveTo(w * 0.58, h * 0.78)
+      ..quadraticBezierTo(w * 0.56, h * 0.92, w * 0.65, h * 0.94)
+      ..quadraticBezierTo(w * 0.74, h * 0.92, w * 0.74, h * 0.80)
+      ..quadraticBezierTo(w * 0.70, h * 0.74, w * 0.62, h * 0.76)
+      ..quadraticBezierTo(w * 0.59, h * 0.77, w * 0.58, h * 0.78)
       ..close();
     canvas.drawPath(spat, Paint()..color = olive);
     canvas.drawPath(spat, outline);
     canvas.drawArc(
       Rect.fromCenter(
-        center: Offset(w * 0.45, h * 0.92),
+        center: Offset(w * 0.65, h * 0.92),
         width: w * 0.14,
         height: h * 0.08,
       ),
