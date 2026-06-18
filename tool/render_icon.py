@@ -184,12 +184,41 @@ IOS_ICONS = {
 }
 
 
+def render_launch_image(target_size: int) -> Image.Image:
+    """Launch image: logo centred on a parchment background with light
+    paper-grain texture. Square at the requested size."""
+    # Draw a logo a bit smaller than the canvas, then composite on background.
+    bg = Image.new('RGB', (target_size, target_size), PARCHMENT)
+    bg_draw = ImageDraw.Draw(bg)
+
+    # Sprinkle paper-grain dots for vintage texture
+    import random as _random
+    rng = _random.Random(11)
+    for _ in range(int(target_size * 0.6)):
+        x = rng.randint(0, target_size - 1)
+        y = rng.randint(0, target_size - 1)
+        d = max(1, rng.randint(1, max(2, target_size // 256)))
+        # darker ink-light speckles, very low alpha
+        bg_draw.ellipse([(x, y), (x + d, y + d)], fill=(120, 95, 60))
+
+    # Render logo at 70% size, paste centered
+    logo_size = int(target_size * 0.70)
+    logo = render_logo(logo_size, background=PARCHMENT)
+    offset = (target_size - logo_size) // 2
+    bg.paste(logo, (offset, offset))
+    return bg
+
+
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     project = os.path.dirname(here)
     icons_dir = os.path.join(
         project,
         'ios', 'Runner', 'Assets.xcassets', 'AppIcon.appiconset',
+    )
+    launch_dir = os.path.join(
+        project,
+        'ios', 'Runner', 'Assets.xcassets', 'LaunchImage.imageset',
     )
     assets_dir = os.path.join(project, 'assets')
     os.makedirs(assets_dir, exist_ok=True)
@@ -203,6 +232,18 @@ def main():
         img = master.resize((sz, sz), Image.LANCZOS) if sz != 1024 else master
         img.save(os.path.join(icons_dir, fname), 'PNG')
         print(f'wrote {fname} ({sz}x{sz})')
+
+    # Launch images: 1x base 320, then 2x and 3x.
+    # A 320×320 base means the splash logo is ~960px on a Pro Max screen,
+    # comfortable and not pixelated.
+    base = 320
+    for name, scale in [('LaunchImage.png', 1),
+                        ('LaunchImage@2x.png', 2),
+                        ('LaunchImage@3x.png', 3)]:
+        sz = base * scale
+        launch = render_launch_image(sz)
+        launch.save(os.path.join(launch_dir, name), 'PNG')
+        print(f'wrote {name} ({sz}x{sz})')
 
 
 if __name__ == '__main__':
