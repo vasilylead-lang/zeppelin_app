@@ -104,18 +104,25 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
     _ticker.addListener(_tick);
   }
 
+  // Physics constants for visual airspeed math.
+  // The plane's true airspeed is ~150 km/h with a small spread, and the
+  // visible drift across the sky is the *relative* speed against the zeppelin
+  // (added when flying opposite, subtracted when flying alongside).
+  static const double _zeppelinMaxKmh = 120;
+  static const double _planeAirspeedKmh = 150;
+  static const double _planeAirspeedSpread = 30; // ±15 km/h jitter
+  // Tuned so 150 km/h ≈ middle of the previous drift rate (~0.0024 frac/tick).
+  static const double _speedScale = 1.6e-5;
+
   _Plane _spawnPlane({bool initial = false}) {
     final goingRight = _rng.nextBool();
     return _Plane(
       x: initial ? _rng.nextDouble() : (goingRight ? -0.20 : 1.20),
-      // Foreground band — close to the airship's altitude
       y: 0.18 + _rng.nextDouble() * 0.50,
-      // Brisk drift — these are right in front of you
-      speed: 0.0012 + _rng.nextDouble() * 0.0024,
+      // Each plane's true airspeed in km/h
+      airspeedKmh: _planeAirspeedKmh +
+          (_rng.nextDouble() - 0.5) * _planeAirspeedSpread,
       goingRight: goingRight,
-      // Scaled to read in proportion to the zeppelin's gondola/windows —
-      // the plane should look like a real aircraft next to the airship,
-      // not as big as it.
       scale: 0.55 + _rng.nextDouble() * 0.25,
     );
   }
@@ -149,8 +156,20 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
         final effectiveThrottle = _engineOn ? _throttleTarget : 0.0;
         _throttle += (effectiveThrottle - _throttle) * _smooth;
 
+        // The zeppelin's current speed (smoothed via the hidden _throttle field
+        // that progresses toward _throttleTarget). Used to compute the visible
+        // relative motion of the surrounding aircraft.
+        final zeppelinKmh = _throttle * _zeppelinMaxKmh;
         for (final p in _planes) {
-          p.x += p.goingRight ? p.speed : -p.speed;
+          // Planes with the wind (same direction as zeppelin → "rightward"
+          // convention): subtract the zeppelin speed — they appear slower.
+          // Planes against the wind: add the zeppelin speed — they appear
+          // to scream past.
+          final relativeKmh = p.goingRight
+              ? (p.airspeedKmh - zeppelinKmh)
+              : (p.airspeedKmh + zeppelinKmh);
+          final perTick = relativeKmh * _speedScale;
+          p.x += p.goingRight ? perTick : -perTick;
         }
         _planes.removeWhere((p) => p.x < -0.2 || p.x > 1.2);
         if (_planes.length < 3 && _rng.nextDouble() < 0.015) {
@@ -419,12 +438,12 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
 }
 
 class _Plane {
-  double x, y, speed, scale;
+  double x, y, airspeedKmh, scale;
   bool goingRight;
   _Plane({
     required this.x,
     required this.y,
-    required this.speed,
+    required this.airspeedKmh,
     required this.goingRight,
     required this.scale,
   });
