@@ -72,10 +72,10 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
 
   // Crash state
   bool _crashed = false;
-  final List<_Debris> _debris = [];
+  final List<Debris> _debris = [];
   double _crashFlash = 0; // 1 → 0 fades after impact
 
-  final List<_Plane> _planes = [];
+  final List<Plane> _planes = [];
   final Random _rng = Random();
   Size _skySize = Size.zero;
 
@@ -114,9 +114,82 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
   // Tuned so 150 km/h ≈ middle of the previous drift rate (~0.0024 frac/tick).
   static const double _speedScale = 1.6e-5;
 
-  _Plane _spawnPlane({bool initial = false}) {
+  // ─── Test hooks ──────────────────────────────────────────────────────────
+  @visibleForTesting
+  static const double smoothFactor = _smooth;
+  @visibleForTesting
+  static const double zeppelinMaxKmh = _zeppelinMaxKmh;
+  @visibleForTesting
+  static const double planeAirspeedKmh = _planeAirspeedKmh;
+  @visibleForTesting
+  static const double speedScale = _speedScale;
+  @visibleForTesting
+  static const double zeppelinW = _zeppelinW;
+  @visibleForTesting
+  static const double zeppelinH = _zeppelinH;
+  @visibleForTesting
+  static const double planeW = _planeW;
+  @visibleForTesting
+  static const double planeH = _planeH;
+
+  @visibleForTesting
+  double get throttle => _throttle;
+  @visibleForTesting
+  set throttle(double v) => setState(() => _throttle = v);
+  @visibleForTesting
+  double get throttleTarget => _throttleTarget;
+  @visibleForTesting
+  set throttleTarget(double v) => setState(() => _throttleTarget = v);
+  @visibleForTesting
+  double get altitude => _altitude;
+  @visibleForTesting
+  set altitude(double v) => setState(() => _altitude = v);
+  @visibleForTesting
+  double get altitudeTarget => _altitudeTarget;
+  @visibleForTesting
+  set altitudeTarget(double v) => setState(() => _altitudeTarget = v);
+  @visibleForTesting
+  double get heading => _heading;
+  @visibleForTesting
+  set heading(double v) => setState(() => _heading = v);
+  @visibleForTesting
+  double get headingTarget => _headingTarget;
+  @visibleForTesting
+  set headingTarget(double v) => setState(() => _headingTarget = v);
+  @visibleForTesting
+  bool get engineOn => _engineOn;
+  @visibleForTesting
+  set engineOn(bool v) => setState(() => _engineOn = v);
+  @visibleForTesting
+  bool get crashed => _crashed;
+  @visibleForTesting
+  double get crashFlash => _crashFlash;
+  @visibleForTesting
+  List<Plane> get planes => _planes;
+  @visibleForTesting
+  List<Debris> get debris => _debris;
+  @visibleForTesting
+  Size get skySize => _skySize;
+  @visibleForTesting
+  // ignore: avoid_setters_without_getters
+  set skySize(Size s) => _skySize = s;
+
+  @visibleForTesting
+  void runTick() => _tick();
+  @visibleForTesting
+  void triggerCrash(Offset origin) => _triggerCrash(origin);
+  @visibleForTesting
+  void reset() => _reset();
+  @visibleForTesting
+  Plane spawnPlane({bool initial = false}) => _spawnPlane(initial: initial);
+  @visibleForTesting
+  Rect zeppelinRect() => _zeppelinRect();
+  @visibleForTesting
+  Rect planeRect(Plane p) => _planeRect(p);
+
+  Plane _spawnPlane({bool initial = false}) {
     final goingRight = _rng.nextBool();
-    return _Plane(
+    return Plane(
       x: initial ? _rng.nextDouble() : (goingRight ? -0.20 : 1.20),
       y: 0.18 + _rng.nextDouble() * 0.50,
       // Each plane's true airspeed in km/h
@@ -141,7 +214,7 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
     );
   }
 
-  Rect _planeRect(_Plane p) {
+  Rect _planeRect(Plane p) {
     final w = _planeW * p.scale;
     final h = _planeH * p.scale;
     return Rect.fromLTWH(p.x * _skySize.width, p.y * _skySize.height, w, h);
@@ -208,12 +281,12 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
     _engineOn = false;
     _debris.clear();
     // Spawn debris pieces around impact point
-    const kinds = _DebrisKind.values;
+    const kinds = DebrisKind.values;
     for (int i = 0; i < 18; i++) {
       final kind = kinds[i % kinds.length];
       final ang = _rng.nextDouble() * 2 * pi;
       final v = 3 + _rng.nextDouble() * 5;
-      _debris.add(_Debris(
+      _debris.add(Debris(
         x: origin.dx + (_rng.nextDouble() - 0.5) * 40,
         y: origin.dy + (_rng.nextDouble() - 0.5) * 30,
         vx: cos(ang) * v,
@@ -329,7 +402,7 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
                               Positioned.fill(
                                 child: IgnorePointer(
                                   child: CustomPaint(
-                                    painter: _DebrisPainter(_debris),
+                                    painter: DebrisPainter(_debris),
                                   ),
                                 ),
                               ),
@@ -422,7 +495,7 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
     });
   }
 
-  Widget _buildPlane(_Plane p, BoxConstraints c) {
+  Widget _buildPlane(Plane p, BoxConstraints c) {
     return Positioned(
       left: p.x * c.maxWidth,
       top: p.y * c.maxHeight,
@@ -437,10 +510,10 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
   }
 }
 
-class _Plane {
+class Plane {
   double x, y, airspeedKmh, scale;
   bool goingRight;
-  _Plane({
+  Plane({
     required this.x,
     required this.y,
     required this.airspeedKmh,
@@ -451,13 +524,13 @@ class _Plane {
 
 // ─── Debris ─────────────────────────────────────────────────────────────────
 
-enum _DebrisKind { envelope, gondola, propeller, fin, window, plank }
+enum DebrisKind { envelope, gondola, propeller, fin, window, plank }
 
-class _Debris {
+class Debris {
   double x, y, vx, vy, rotation, spin, size;
   int life;
-  _DebrisKind kind;
-  _Debris({
+  DebrisKind kind;
+  Debris({
     required this.x,
     required this.y,
     required this.vx,
@@ -470,9 +543,9 @@ class _Debris {
   });
 }
 
-class _DebrisPainter extends CustomPainter {
-  final List<_Debris> debris;
-  _DebrisPainter(this.debris);
+class DebrisPainter extends CustomPainter {
+  final List<Debris> debris;
+  DebrisPainter(this.debris);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -486,7 +559,7 @@ class _DebrisPainter extends CustomPainter {
       canvas.rotate(d.rotation);
       final fade = (d.life / 180).clamp(0.0, 1.0);
       switch (d.kind) {
-        case _DebrisKind.envelope:
+        case DebrisKind.envelope:
           // Cream chunk
           final rect = Rect.fromCenter(
             center: Offset.zero,
@@ -499,7 +572,7 @@ class _DebrisPainter extends CustomPainter {
           );
           canvas.drawOval(rect, outline);
           break;
-        case _DebrisKind.gondola:
+        case DebrisKind.gondola:
           final rect = Rect.fromCenter(
             center: Offset.zero,
             width: d.size * 1.4,
@@ -514,7 +587,7 @@ class _DebrisPainter extends CustomPainter {
             outline,
           );
           break;
-        case _DebrisKind.propeller:
+        case DebrisKind.propeller:
           final p = Paint()
             ..color = TTR.brass.withValues(alpha: fade)
             ..strokeWidth = 2.5
@@ -530,7 +603,7 @@ class _DebrisPainter extends CustomPainter {
             Paint()..color = TTR.ink.withValues(alpha: fade),
           );
           break;
-        case _DebrisKind.fin:
+        case DebrisKind.fin:
           final path = Path()
             ..moveTo(-d.size * 0.6, d.size * 0.5)
             ..lineTo(d.size * 0.6, 0)
@@ -542,7 +615,7 @@ class _DebrisPainter extends CustomPainter {
           );
           canvas.drawPath(path, outline);
           break;
-        case _DebrisKind.window:
+        case DebrisKind.window:
           canvas.drawCircle(
             Offset.zero,
             d.size * 0.4,
@@ -550,7 +623,7 @@ class _DebrisPainter extends CustomPainter {
           );
           canvas.drawCircle(Offset.zero, d.size * 0.4, outline);
           break;
-        case _DebrisKind.plank:
+        case DebrisKind.plank:
           final rect = Rect.fromCenter(
             center: Offset.zero,
             width: d.size * 1.8,
@@ -568,7 +641,7 @@ class _DebrisPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DebrisPainter old) => true;
+  bool shouldRepaint(covariant DebrisPainter old) => true;
 }
 
 // ─── Crash banner ───────────────────────────────────────────────────────────
