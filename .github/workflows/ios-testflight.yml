@@ -45,6 +45,21 @@ jobs:
       - name: Pub get
         run: flutter pub get
 
+      # ─── Tests (must pass before we sign or upload anything) ─────────────
+      - name: Static analysis
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        run: flutter test --coverage --reporter expanded
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/lcov.info
+          retention-days: 14
+
       # ─── Import signing assets ────────────────────────────────────────────
       - name: Import Apple Distribution certificate
         env:
