@@ -21,7 +21,7 @@
     -->
     <key>provisioningProfiles</key>
     <dict>
-        <key>com.vasilylead.zeppelincommander</key>
+        <key>com.vasilylead.zepprlincommander</key>
         <string>Zeppelin App Distribution</string>
     </dict>
 </dict>
