@@ -427,10 +427,14 @@ class _ZeppelinControlPageState extends State<ZeppelinControlPage>
                               top: 14,
                               child: _Logo(size: 64),
                             ),
+                            // Banner sits between the logo (left) and compass
+                            // rose (right). Explicit insets give FittedBox a
+                            // bounded width to scale into so the text always
+                            // stays on a single row on any device size.
                             const Positioned(
                               top: 12,
-                              left: 0,
-                              right: 0,
+                              left: 82,
+                              right: 82,
                               child: Center(child: _TitleBanner()),
                             ),
                             Positioned(
@@ -724,7 +728,7 @@ class _TitleBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
       decoration: BoxDecoration(
         color: TTR.red,
         border: Border.all(color: TTR.ink, width: 2),
@@ -736,15 +740,23 @@ class _TitleBanner extends StatelessWidget {
           ),
         ],
       ),
-      child: const Text(
-        '✦  Z E P P E L I N    C O M M A N D  ✦',
-        style: TextStyle(
-          color: TTR.cream,
-          fontFamily: 'Georgia',
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
-          letterSpacing: 1.5,
-          shadows: [Shadow(color: TTR.ink, offset: Offset(1, 1))],
+      // FittedBox keeps the whole title on a single row on narrow displays
+      // by shrinking the typography instead of letting it wrap onto two lines.
+      child: const FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          '✦  Z E P P E L I N   C O M M A N D  ✦',
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.visible,
+          style: TextStyle(
+            color: TTR.cream,
+            fontFamily: 'Georgia',
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            letterSpacing: 1.5,
+            shadows: [Shadow(color: TTR.ink, offset: Offset(1, 1))],
+          ),
         ),
       ),
     );
