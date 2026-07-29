@@ -1893,6 +1893,38 @@ class _ControlPanel extends StatelessWidget {
             accent: TTR.green,
             valueLabel: '${(heading * 45).toStringAsFixed(0)}°',
           ),
+          const SizedBox(height: 8),
+          // Dev-only Sentry verification button. Remove once the DSN is
+          // confirmed to receive events.
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton(
+              onPressed: () {
+                throw StateError('This is test exception');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: TTR.wood,
+                foregroundColor: TTR.cream,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.zero,
+                  side: const BorderSide(color: TTR.ink, width: 1.5),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text(
+                'Verify Sentry Setup',
+                style: TextStyle(
+                  fontFamily: 'Georgia',
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
