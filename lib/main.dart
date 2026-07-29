@@ -30,7 +30,7 @@ Future<void> main() async {
     appRunner: () => runApp(
       // SentryWidget enables user-interaction tracing + widget-tree context on
       // captured errors.
-      const SentryWidget(child: ZeppelinApp()),
+      SentryWidget(child: const ZeppelinApp()),
     ),
   );
 }
