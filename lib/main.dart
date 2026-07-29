@@ -1,8 +1,38 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
-void main() {
-  runApp(const ZeppelinApp());
+// Sentry DSN. Public/write-only key — safe to ship in the binary — but
+// overridable per build via  --dart-define=SENTRY_DSN=…  so staging/dev
+// projects can be routed to a different Sentry project.
+const _sentryDsn = String.fromEnvironment(
+  'SENTRY_DSN',
+  defaultValue:
+      'https://cad7e1ef57623439213929d24a41d17f@o383864.ingest.us.sentry.io/4511818914201600',
+);
+
+Future<void> main() async {
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = _sentryDsn;
+      // Capture 100% of errors; sample only a fraction of transactions to
+      // avoid quota blow-outs from the game loop.
+      options.tracesSampleRate = 0.2;
+      options.profilesSampleRate = 0.2;
+      // Attach useful context automatically.
+      options.attachScreenshot = false; // opt in later if you want them
+      options.attachViewHierarchy = false;
+      options.sendDefaultPii = false;
+      options.enableAutoSessionTracking = true;
+      // In debug builds don't spam Sentry; still logs to console.
+      options.debug = false;
+    },
+    appRunner: () => runApp(
+      // SentryWidget enables user-interaction tracing + widget-tree context on
+      // captured errors.
+      const SentryWidget(child: ZeppelinApp()),
+    ),
+  );
 }
 
 // ─── Ticket-to-Ride palette ─────────────────────────────────────────────────
