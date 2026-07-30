@@ -12,6 +12,14 @@ const _sentryDsn = String.fromEnvironment(
 );
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Lock to portrait — the sky scene and control panel are laid out
+  // vertically and aren't designed for landscape.
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   await SentryFlutter.init(
     (options) {
       options.dsn = _sentryDsn;
