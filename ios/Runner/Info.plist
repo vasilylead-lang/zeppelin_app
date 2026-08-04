@@ -55,6 +55,13 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<!-- Opts out of iPad Split View / Slide Over multitasking so the app
+	     always runs full-screen (native iPad rendering, not the small
+	     letterboxed iPhone-compatibility window) — and per Apple's rules
+	     this also exempts the app from having to declare all four
+	     orientations, so it can stay portrait-only. -->
+	<key>UIRequiresFullScreen</key>
+	<true/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
